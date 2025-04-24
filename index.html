@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Home Loan Strategy Auto Evaluator</title>
+</head>
+<body>
+  <h2>Open Console to See Full Analysis</h2>
+
+  <script>
+    function calculateEMI(P, R, N) {
+      const r = R / (12 * 100);
+      return P * r * Math.pow(1 + r, N) / (Math.pow(1 + r, N) - 1);
+    }
+
+    function simulateExtraEMI(P, R, N, newEMI) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0, count = 0;
+      while (balance > 0 && count < N) {
+        const interest = balance * r;
+        const principal = newEMI - interest;
+        balance -= principal;
+        total += newEMI;
+        count++;
+      }
+      return total - P;
+    }
+
+    function simulateLumpSum(P, R, N, emi, lump, monthLump) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0;
+      for (let i = 1; i <= N; i++) {
+        const interest = balance * r;
+        const principal = emi - interest;
+        balance -= principal;
+        total += emi;
+        if (i === monthLump) {
+          balance -= lump;
+          total += lump;
+        }
+        if (balance <= 0) break;
+      }
+      return total - P;
+    }
+
+    function simulateRefinance(P, oldRate, newRate, N, afterMonths) {
+      const r1 = oldRate / (12 * 100), r2 = newRate / (12 * 100);
+      const emiOld = calculateEMI(P, oldRate, N);
+      let balance = P, total = 0;
+
+      for (let i = 1; i <= afterMonths; i++) {
+        const interest = balance * r1;
+        const principal = emiOld - interest;
+        balance -= principal;
+        total += emiOld;
+      }
+
+      const emiNew = calculateEMI(balance, newRate, N - afterMonths);
+      for (let i = 1; i <= N - afterMonths; i++) {
+        const interest = balance * r2;
+        const principal = emiNew - interest;
+        balance -= principal;
+        total += emiNew;
+        if (balance <= 0) break;
+      }
+
+      return total - P;
+    }
+
+    function simulateBoostAndLump(P, R, N, newEMI, lump, lumpMonth) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0;
+      for (let i = 1; i <= N; i++) {
+        const interest = balance * r;
+        const principal = newEMI - interest;
+        balance -= principal;
+        total += newEMI;
+        if (i === lumpMonth) {
+          balance -= lump;
+          total += lump;
+        }
+        if (balance <= 0) break;
+      }
+      return total - P;
+    }
+
+    function evaluateStrategies() {
+      const pnr = prompt("Enter your PNR/User ID:");
+      const P = parseFloat(prompt("Loan amount (₹):"));
+      const R = parseFloat(prompt("Interest rate (%):"));
+      const Y = parseFloat(prompt("Tenure (years):"));
+      const N = Y * 12;
+      const baseEMI = calculateEMI(P, R, N);
+      const baseInterest = baseEMI * N - P;
+
+      console.clear();
+      console.log(`🧠 Auto Strategy Analysis for PNR: ${pnr}`);
+      console.log(`Original EMI: ₹${baseEMI.toFixed(2)}, Interest: ₹${baseInterest.toFixed(2)}\n`);
+
+      const results = [];
+
+      function addResult(name, newInterest) {
+        results.push({
+          strategy: name,
+          interest: newInterest,
+          savings: baseInterest - newInterest
+        });
+      }
+
+      // Simulations for each strategy (you can add more)
+      addResult("Flexible Monthly Extra EMI (Fixed)", simulateExtraEMI(P, R, N, baseEMI + 3000));
+      addResult("Flexible Monthly Extra EMI (Variable)", simulateExtraEMI(P, R, N, baseEMI + 1000));
+      addResult("Lump Sum at Flexible Intervals", simulateLumpSum(P, R, N, baseEMI, 200000, 24));
+      addResult("Increase Tenure for Now, Optimize Later", baseInterest - 0);
+      addResult("Change Lender + Prepayment", simulateRefinance(P, R, R - 1.5, N, 24));
+      addResult("Prepay + Increase EMI Gradually", simulateExtraEMI(P - 100000, R, N, baseEMI + 1500));
+      addResult("Increase Tenure + Save + Bulk Prepayment", simulateLumpSum(P, R, N, baseEMI, 300000, 60));
+      addResult("EMI Increase + Lumpsum", simulateBoostAndLump(P, R, N, baseEMI + 2000, 150000, 36));
+      addResult("EMI Increase + Refinance", simulateRefinance(P, R, R - 1, N, 36));
+      addResult("Refinance + Tenure Cut", simulateRefinance(P, R, R - 1.2, N, 12));
+      addResult("EMI Boost + Tenure Cut", simulateExtraEMI(P, R, N, baseEMI + 3000));
+      addResult("EMI Boost + Lumpsum + Tenure Cut", simulateBoostAndLump(P, R, N, baseEMI + 3000, 200000, 24));
+      addResult("Save Separately + Bulk Prepay", simulateLumpSum(P, R, N, baseEMI, 300000, 60));
+      addResult("Tenure Extend + Prepay Later", simulateLumpSum(P, R, N, baseEMI, 250000, 48));
+      addResult("Tenure Extend + Save + Bulk Prepay", simulateLumpSum(P, R, N, baseEMI, 250000, 60));
+
+      // Sort results by best savings
+      results.sort((a, b) => b.savings - a.savings);
+
+      console.table(results.map(r => ({
+        Strategy: r.strategy,
+        "Interest (₹)": r.interest.toFixed(2),
+        "Saved (₹)": r.savings.toFixed(2)
+      })));
+
+      alert(`Analysis complete for PNR: ${pnr}\nTop strategy: ${results[0].strategy}\nSaved: ₹${results[0].savings.toFixed(0)}`);
+    }
+
+    evaluateStrategies();
+  </script>
+</body>
+</html>

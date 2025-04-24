@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Loan Strategy Suggestions</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f2f2f2;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    label, select, input {
+      display: block;
+      width: 100%;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 2rem;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .result {
+      margin-top: 2rem;
+      background: #e7f4e4;
+      padding: 1rem;
+      border-left: 5px solid #4CAF50;
+    }
+    .extra-input {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Home Loan Strategy Suggestions</h2>
+    <form id="loanForm">
+      <label>Principal (₹): <input type="number" id="principal" required></label>
+      <label>Tenure (in years): <input type="number" id="tenure" required></label>
+      <label>Interest Rate (annual %): <input type="number" step="0.01" id="rate" required></label>
+      <hr>
+      <label>What is your primary goal?</label>
+      <select id="goal">
+        <option value="early">Close Loan Early</option>
+        <option value="interest">Reduce Interest Paid</option>
+        <option value="lowEmi">Lower EMIs Now, Repay Later</option>
+        <option value="unsure">I’m Unsure, Suggest Best</option>
+      </select>
+
+      <div id="extraQuestions"></div>
+
+      <button type="submit">Get Strategy</button>
+    </form>
+
+    <div class="result" id="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    const strategies = [
+      { name: 'EMI Boost + Lumpsum + Tenure Cut', description: 'Increase EMI, pay a lump sum, and reduce tenure to pay off your loan early.' },
+      { name: 'EMI Increase + Lumpsum', description: 'Increase EMI and pay lump sum amounts to save on interest.' },
+      { name: 'Flexible Monthly Extra EMI', description: 'Pay extra EMI flexibly each month based on your income and ability.' },
+      { name: 'EMI Boost + Tenure Cut', description: 'Boost your EMI and reduce your loan tenure to reduce total interest paid.' },
+      { name: 'Prepay + Increase EMI Gradually', description: 'Prepay portions of your loan and increase EMI over time to reduce interest.' },
+      { name: 'Change Lender + Prepayment', description: 'Switch lenders for a lower interest rate and make a lump sum prepayment.' },
+      { name: 'Refinance + Tenure Cut', description: 'Refinance with a new lender and reduce your loan tenure.' },
+      { name: 'Increase Tenure + Save + Bulk Prepayment', description: 'Increase your tenure for now, save for future prepayments.' },
+      { name: 'Save Separately + Bulk Prepay', description: 'Save for a future bulk prepayment to reduce principal and interest.' },
+      { name: 'Lump Sum at Flexible Intervals', description: 'Make lump sum payments when you receive additional income or bonuses.' },
+      { name: 'Tenure Extend + Prepay Later', description: 'Extend your tenure temporarily and prepay later when your financial situation improves.' },
+      { name: 'EMI Increase + Refinance', description: 'Increase your EMI and refinance your loan for better terms.' },
+      { name: 'Flexible Monthly Extra EMI (Variable)', description: 'Make extra payments based on your variable income.' },
+      { name: 'Increase Tenure for Now, Optimize Later', description: 'Extend your tenure now, and optimize payments as your situation improves.' }
+    ];
+
+    const form = document.getElementById('loanForm');
+    const extraDiv = document.getElementById('extraQuestions');
+    const resultBox = document.getElementById('result');
+
+    document.getElementById('goal').addEventListener('change', e => {
+      const val = e.target.value;
+      extraDiv.innerHTML = '';
+      if (val === 'early' || val === 'interest') {
+        extraDiv.innerHTML += `
+          <label class="extra-input">Can you contribute extra monthly? 
+            <select id="q1"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </label>
+          <label class="extra-input">How much extra can you pay monthly? (₹)
+            <input type="number" id="extraAmount" min="0" placeholder="e.g., 5000">
+          </label>
+          <label class="extra-input">Do you expect lump sum income (bonus, sale etc)?
+            <select id="q4"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </label>
+        `;
+      } else if (val === 'lowEmi') {
+        extraDiv.innerHTML += `
+          <label class="extra-input">Are you okay extending tenure now? 
+            <select id="q7"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </label>
+          <label class="extra-input">Will income increase in next 3 years? 
+            <select id="q8"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </label>
+          <label class="extra-input">Can you start saving for bulk prepayment later?
+            <select id="q6"><option value="Yes">Yes</option><option value="No">No</option></select>
+          </label>
+        `;
+      }
+    });
+
+    // Function to calculate the total amount paid over the tenure
+    function calculateTotalPayment(principal, rate, tenure) {
+      const monthlyRate = rate / 12 / 100;
+      const months = tenure * 12;
+      const emi = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
+      return emi * months;
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      // Collect input values
+      const principal = parseFloat(document.getElementById('principal').value);
+      const tenure = parseFloat(document.getElementById('tenure').value);
+      const rate = parseFloat(document.getElementById('rate').value);
+      const goal = document.getElementById('goal').value;
+
+      const totalWithoutStrategy = calculateTotalPayment(principal, rate, tenure);
+
+      let selectedStrategies = [];
+      if (goal === 'early') {
+        const q1 = document.getElementById('q1').value;
+        const lump = document.getElementById('q4').value;
+        if (q1 === 'Yes' && lump === 'Yes') {
+          selectedStrategies.push(strategies[0]);  // EMI boost + lump sum + tenure cut
+        } else if (q1 === 'Yes') {
+          selectedStrategies.push(strategies[2]);  // Flexible extra EMI
+        } else {
+          selectedStrategies.push(strategies[5]);  // Change lender + prepayment
+        }
+      } else if (goal === 'interest') {
+        selectedStrategies.push(strategies[1]);  // EMI increase + lump sum
+        selectedStrategies.push(strategies[4]);  // Prepay + increase EMI
+      } else if (goal === 'lowEmi') {
+        const q7 = document.getElementById('q7').value;
+        if (q7 === 'Yes') {
+          selectedStrategies.push(strategies[6]);  // Refinance + tenure cut
+        } else {
+          selectedStrategies.push(strategies[7]);  // Increase tenure + save for prepayment
+        }
+      } else {
+        selectedStrategies.push(strategies[12]);  // Increase tenure for now, optimize later
+      }
+
+      resultBox.innerHTML = `<h3>Suggested Strategies</h3>`;
+      selectedStrategies.forEach(strategy => {
+        // Dummy calculation for savings (just to show structure)
+        const totalWithStrategy = totalWithoutStrategy * 0.9; // Example: 10% savings with the strategy
+        const savings = totalWithoutStrategy - totalWithStrategy;
+
+        resultBox.innerHTML += `
+          <p><strong>${strategy.name}:</strong> ${strategy.description}</p>
+          <p><strong>Total Paid Without Strategy:</strong> ₹${totalWithoutStrategy.toFixed(2)}</p>
+          <p><strong>Total Paid With Strategy:</strong> ₹${totalWithStrategy.toFixed(2)}</p>
+          <p><strong>Estimated Savings:</strong> ₹${savings.toFixed(2)}</p>
+          <hr>
+        `;
+      });
+
+      resultBox.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
