@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Loan Payment Breakdown</title>
+</head>
+<body>
+
+    <div>
+        <h1>Dynamic Loan Payment Breakdown</h1>
+
+        <label for="loanAmount">Loan Amount (₹):</label>
+        <input type="number" id="loanAmount" placeholder="Enter loan amount" required>
+
+        <label for="outstandingBalance">Outstanding Balance (₹):</label>
+        <input type="number" id="outstandingBalance" placeholder="Enter outstanding balance (leave empty if new loan)">
+
+        <label for="interestRate">Interest Rate (%):</label>
+        <input type="number" id="interestRate" placeholder="Enter interest rate" required>
+
+        <label for="loanTenure">Loan Tenure (in Years):</label>
+        <input type="number" id="loanTenure" placeholder="Enter loan tenure" required>
+
+        <label for="stepUpRate">EMI Step-Up Rate (% per year):</label>
+        <input type="number" id="stepUpRate" placeholder="Enter EMI step-up rate" required>
+
+        <label for="monthlyPrepayment">Prepayment Amount (₹):</label>
+        <input type="number" id="monthlyPrepayment" placeholder="Enter prepayment amount">
+
+        <label for="prepaymentFrequency">Prepayment Frequency:</label>
+        <select id="prepaymentFrequency">
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+        </select>
+
+        <label for="lumpSumPrepayment">Lump Sum Prepayment (₹):</label>
+        <input type="number" id="lumpSumPrepayment" placeholder="Enter lump sum prepayment amount">
+
+        <button onclick="calculatePayments()">Calculate</button>
+    </div>
+
+    <h2>Annual Payment Breakdown</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Year</th>
+                <th>EMI Payment (₹)</th>
+                <th>Total Payment for Year (₹)</th>
+            </tr>
+        </thead>
+        <tbody id="paymentDetails"></tbody>
+    </table>
+
+    <h3>Savings Calculation</h3>
+    <p id="savingsDetails"></p>
+
+    <script>
+        function calculatePayments() {
+            // Get user inputs
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+            const outstandingInput = document.getElementById('outstandingBalance').value;
+            const outstandingBalanceInput = outstandingInput ? parseFloat(outstandingInput) : loanAmount;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+            const loanTenure = parseInt(document.getElementById('loanTenure').value);
+            const stepUpRate = parseFloat(document.getElementById('stepUpRate').value) / 100;
+            const prepaymentAmount = parseFloat(document.getElementById('monthlyPrepayment').value) || 0;
+            const prepaymentFrequency = document.getElementById('prepaymentFrequency').value;
+            const lumpSumPrepayment = parseFloat(document.getElementById('lumpSumPrepayment').value) || 0;
+
+            const monthlyInterestRate = interestRate / 12;
+            let outstandingBalance = outstandingBalanceInput;
+            let emi = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -(loanTenure * 12)));
+            //console.log(monthlyInterestRate);
+            let totalPaid = 0;
+            let year = 1;
+            let month = 1;
+            let paymentDetails = '';
+            let yearTotalPayment = 0;
+            const paymentDetailsElement = document.getElementById('paymentDetails');
+            paymentDetailsElement.innerHTML = '';
+
+            const originalTotalPayment = emi * 12 * loanTenure; // 12 EMIs per year × years
+
+            while (outstandingBalance > 0) {
+                // Calculate interest and principal for this month
+                const monthlyInterest = outstandingBalance * monthlyInterestRate;
+                const principalComponent = emi - monthlyInterest;
+
+                // Determine if prepayment should happen this month
+                let extraPrepayment = 0;
+                if (prepaymentAmount > 0) {
+                    if (prepaymentFrequency === "monthly") {
+                        extraPrepayment = prepaymentAmount;
+                    } else if (prepaymentFrequency === "quarterly" && month % 3 === 0) {
+                        extraPrepayment = prepaymentAmount;
+                    } else if (prepaymentFrequency === "yearly" && month % 12 === 0) {
+                        extraPrepayment = prepaymentAmount;
+                    }
+                }
+
+                // Update outstanding balance
+                outstandingBalance -= (principalComponent + extraPrepayment);
+
+                // Apply lump sum only once at first month
+                if (month === 1 && lumpSumPrepayment > 0) {
+                    outstandingBalance -= lumpSumPrepayment;
+                }
+
+                // Accumulate this month's payment
+                yearTotalPayment += emi + extraPrepayment;
+                totalPaid += emi + extraPrepayment;
+
+                if (outstandingBalance <= 0) {
+                    break;
+                }
+
+                // After 12 months, complete a year
+                if (month % 12 === 0) {
+                    paymentDetails += `
+                        <tr>
+                            <td>Year ${year}</td>
+                            <td>₹${emi.toFixed(2)}</td>
+                            <td>₹${yearTotalPayment.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    // Increase EMI based on Step-Up Rate
+                    emi += emi * stepUpRate;
+                    year++;
+                    yearTotalPayment = 0;
+                }
+
+                month++;
+            }
+
+            // If loan closed in the middle of year
+            if (yearTotalPayment > 0) {
+                paymentDetails += `
+                    <tr>
+                        <td>Year ${year}</td>
+                        <td>₹${emi.toFixed(2)}</td>
+                        <td>₹${yearTotalPayment.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+
+            paymentDetailsElement.innerHTML = paymentDetails;
+
+            // Final savings calculation
+            const totalSavings = originalTotalPayment - totalPaid;
+const savingsPercentage = (totalSavings / originalTotalPayment) * 100;
+const savingsDetails = document.getElementById('savingsDetails');
+
+savingsDetails.innerHTML = `
+    <strong>Original Total Payment (without reducing tenure):</strong> <b>₹${originalTotalPayment.toLocaleString()}</b> rupees<br>
+    <strong>Actual Total Payment (with faster closure):</strong> <b>₹${totalPaid.toLocaleString()}</b> rupees<br>
+    <strong>You Saved:</strong> <b>₹${totalSavings.toLocaleString()}</b> rupees 
+    (<b>${savingsPercentage.toFixed(2)}%</b> savings)
+`;
+        }
+    </script>
+
+</body>
+</html>
