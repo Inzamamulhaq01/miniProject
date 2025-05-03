@@ -6,33 +6,34 @@ include '../conn.php';
 $data = json_decode(file_get_contents('php://input'), true);
 
 // Required fields
-$required = ['id', 'salary', 'expenditure', 'creditScore', 'extraFund', 'principal', 'rate', 'tenure', 'startDate', 'missedEmi', 'repayment', 'savings'];
-foreach ($required as $field) {
-    if (!isset($data[$field]) || $data[$field] === '') {
-        echo json_encode(['error' => "Missing or empty field: $field"]);
-        exit;
-    }
-}
+// $required = ['id', 'salary', 'creditScore', 'extraFund', 'principal', 'rate', 'tenure', 'startDate',  'repayment', 'savings'];
+// foreach ($required as $field) {
+//     if (!isset($data[$field]) || $data[$field] === '') {
+//         echo json_encode(['error' => "Missing or empty field: $field"]);
+//         exit;
+//     }
+// }
 
 // Sanitize and typecast
 $user_id     = (int) $data['id'];
 $salary      = floatval($data['salary']);
-$expenditure = floatval($data['expenditure']);
+// $expenditure = floatval($data['expenditure']);
 $creditScore = (int) $data['creditScore'];
 $extraFund   = trim($data['extraFund']); // optional: escape string
 $principal   = floatval($data['principal']);
 $rate        = floatval($data['rate']);
 $tenure      = (int) $data['tenure'];
 $startDate   = trim($data['startDate']); // Consider validating date format
-$missedEmi   = (int) $data['missedEmi'];
+$bankName    = trim($data['bankName']);
+// $missedEmi   = (int) $data['missedEmi'];
 $repayment   = ($data['repayment'] === 'yes') ? 'yes' : 'no';
 $savings     = floatval($data['savings']);
 
 // Prepare statement
 $sql = "INSERT INTO loan (
-    user_id, salary, expenditure, credit_score, extra_fund,
-    principal, rate, tenure, start_date, missed_emi, repayment, savings
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    user_id, salary, credit_score, extra_fund,
+    principal, rate, tenure, start_date, bank_name, repayment, savings
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -41,9 +42,9 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    "ididddddsiss",
-    $user_id, $salary, $expenditure, $creditScore, $extraFund,
-    $principal, $rate, $tenure, $startDate, $missedEmi, $repayment, $savings
+    "iddddddssss",
+    $user_id, $salary, $creditScore, $extraFund,
+    $principal, $rate, $tenure, $startDate,$bankName , $repayment, $savings
 );
 
 // Execute and respond
