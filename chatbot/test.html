@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Financial Chatbot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Smart Financial Chatbot</h1>
+
+  <div class="chatbox">
+    <div id="chatlog"></div>
+    <div class="input-container">
+      <input type="text" id="userInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+
+  <script>
+    const chatlog = document.getElementById("chatlog");
+    const userInput = document.getElementById("userInput");
+
+    let step = 0;
+    let skipPrepayment = false;
+    let responses = {};
+
+    const questions = [
+      "Are you interested in prepayment? (Y/N)",
+      "How much would you like to prepay? (in ₹)",
+      "Would you like to step up your prepayment amount? (Y/N)",
+      "By what percentage would you like to increase it?",
+      "Which duration is comfortable for your prepayment? (monthly/quarterly/yearly)",
+      "Would you like to make a lump sum prepayment? (Y/N)",
+      "How much would the lump sum be? (in ₹)"
+    ];
+
+    window.onload = () => {
+      appendMessage("bot", "Hi! Let's plan your loan prepayment strategy.");
+      setTimeout(() => askNext(), 1000);
+      userInput.focus();
+    };
+    function appendMessage(sender, text, callback = null) {
+      const msg = document.createElement("div");
+      msg.className = `message ${sender}`;
+      chatlog.appendChild(msg);
+      chatlog.scrollTop = chatlog.scrollHeight;
+    
+      if (sender === "bot") {
+        let i = 0;
+        let formattedText = "";
+        const interval = setInterval(() => {
+          formattedText += text.charAt(i);
+          msg.innerText = formattedText;
+          msg.style.color = "white"; // Ensure the text is white while typing
+          i++;
+          chatlog.scrollTop = chatlog.scrollHeight;
+          if (i >= text.length) {
+            clearInterval(interval);
+            if (callback) callback(); // Call the callback when typing is finished
+          }
+        }, 40); // Adjust typing speed here
+      } else {
+        msg.innerText = text;
+        msg.style.color = "white"; // Ensure the user message is also white
+        if (callback) callback(); // If it's the user's message, just call the callback immediately
+      }
+    }
+    
+    
+    function sendMessage() {
+      const input = userInput.value.trim();
+      if (!input) return;
+
+      appendMessage("user", input);
+      processInput(input.toLowerCase());
+      userInput.value = "";
+    }
+
+    function askNext() {
+      appendMessage("bot", questions[step]);
+    }
+
+    function processInput(input) {
+      switch (step) {
+        case 0:
+          if (input === "y" || input === "n") {
+            responses.prepaymentInterest = input;
+            step = (input === "n") ? 5 : 1;
+            askNext();
+          } else {
+            appendMessage("bot", "Please answer Y or N.");
+          }
+          break;
+
+        case 1:
+          if (!isNaN(parseInt(input))) {
+            responses.prepaymentAmount = input;
+            step = 2;
+            askNext();
+          } else {
+            appendMessage("bot", "Enter a valid amount in rupees.");
+          }
+          break;
+
+        case 2:
+          if (input === "y" || input === "n") {
+            responses.stepUpInterest = input;
+            step = input === "y" ? 3 : 4;
+            if (input === "n") responses.stepUpPercent = "0";
+            askNext();
+          } else {
+            appendMessage("bot", "Please answer Y or N.");
+          }
+          break;
+
+        case 3:
+          if (!isNaN(parseFloat(input))) {
+            responses.stepUpPercent = input;
+            step = 4;
+            askNext();
+          } else {
+            appendMessage("bot", "Enter a valid percentage.");
+          }
+          break;
+
+        case 4:
+          if (["monthly", "quarterly", "yearly"].includes(input)) {
+            responses.prepaymentFrequency = input;
+            step = 5;
+            askNext();
+          } else {
+            appendMessage("bot", "Choose monthly, quarterly, or yearly.");
+          }
+          break;
+
+        case 5:
+          if (input === "y" || input === "n") {
+            responses.lumpSumInterest = input;
+            step = 6;
+            if (input === "n") {
+              responses.lumpSumAmount = "0";
+              showSummary();
+            } else {
+              askNext();
+            }
+          } else {
+            appendMessage("bot", "Please answer Y or N.");
+          }
+          break;
+
+        case 6:
+          if (!isNaN(parseInt(input))) {
+            responses.lumpSumAmount = input;
+            showSummary();
+          } else {
+            appendMessage("bot", "Enter a valid amount in rupees.");
+          }
+          break;
+      }
+    }
+
+    function showSummary() {
+     /* appendMessage("bot", "✅ Summary of your responses:");
+    
+      appendMessage("bot", `- Prepayment: ${responses.prepaymentInterest.toUpperCase()}`);
+      if (responses.prepaymentInterest === "y") {
+        appendMessage("bot", `- Amount: ₹${responses.prepaymentAmount}`);
+        appendMessage("bot", `- Step-Up: ${responses.stepUpInterest.toUpperCase()}`);
+        if (responses.stepUpInterest === "y") {
+          appendMessage("bot", `- Increase by: ${responses.stepUpPercent}%`);
+        }
+        appendMessage("bot", `- Frequency: ${responses.prepaymentFrequency}`);
+      }
+    
+      appendMessage("bot", `- Lump Sum: ${responses.lumpSumInterest.toUpperCase()}`);
+      appendMessage("bot", `- Lump Sum Amount: ₹${responses.lumpSumAmount}`);
+      */
+    
+      let strategy = "Unable to determine strategy. Please review inputs.";
+    
+      if (responses.prepaymentInterest === "n" && responses.lumpSumInterest === "n") {
+        strategy = "Standard Plan – No Prepayment";
+      } else if (responses.prepaymentInterest === "y" && responses.stepUpInterest === "n" && responses.lumpSumInterest === "n") {
+        strategy = "Fixed Extra EMI Plan";
+      } else if (responses.prepaymentInterest === "y" && responses.stepUpInterest === "y" && parseFloat(responses.stepUpPercent) > 0 && responses.lumpSumInterest === "n") {
+        strategy = "Step-Up Prepayment Plan";
+      } else if (responses.prepaymentInterest === "n" && responses.lumpSumInterest === "y") {
+        strategy = "Lump Sum at Flexible Intervals";
+      } else if (responses.prepaymentInterest === "y" && responses.stepUpInterest === "n" && responses.lumpSumInterest === "y") {
+        strategy = "Fixed EMI + Lump Sum";
+      } else if (responses.prepaymentInterest === "y" && responses.stepUpInterest === "y" && responses.lumpSumInterest === "y") {
+        strategy = "Step-Up EMI + Lump Sum";
+      }
+    
+      appendMessage("bot", `✅ Summary of your responses: \n 💡 Recommended Strategy: \n${strategy}`, () => {
+        const detailsLink = document.createElement("div");
+        detailsLink.innerHTML = `<a href="https://example.com/details" target="_blank" style="color:#00f5ff; text-decoration: underline;">Analyze Your Loan</a>`;
+        chatlog.appendChild(detailsLink);
+        chatlog.scrollTop = chatlog.scrollHeight;
+      });
+      
+    }
+    
+        userInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter") sendMessage();
+    });
+  </script>
+
+</body>
+</html>

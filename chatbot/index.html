@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Financial Chatbot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Smart Financial Chatbot</h1>
+
+  <div class="chatbox">
+    <div id="chatlog"></div>
+    <div class="input-container">
+      <input type="text" id="userInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatlog = document.getElementById("chatlog");
+    const userInput = document.getElementById("userInput");
+
+    let step = 0;
+    let responses = {};
+
+    const questions = [
+      "Are you interested in prepayment?",
+      "How much would you like to prepay? (in ₹)",
+      "Would you like to step up your prepayment amount?",
+      "By what percentage would you like to increase it?",
+      "Which duration is comfortable for your prepayment?",
+      "Would you like to make a lump sum prepayment?",
+      "How much would the lump sum be? (in ₹)"
+    ];
+
+    window.onload = () => {
+      appendMessage("bot", "Hi! Let's plan your loan prepayment strategy.", () => {
+        askNext();
+      });
+      userInput.focus();
+    };
+
+    function appendMessage(sender, text, callback = null, options = null) {
+      const msg = document.createElement("div");
+      msg.className = `message ${sender}`;
+      chatlog.appendChild(msg);
+      chatlog.scrollTop = chatlog.scrollHeight;
+
+      if (sender === "bot") {
+        let i = 0;
+        let formattedText = "";
+        const interval = setInterval(() => {
+          formattedText += text.charAt(i);
+          msg.innerText = formattedText;
+          i++;
+          chatlog.scrollTop = chatlog.scrollHeight;
+          if (i >= text.length) {
+            clearInterval(interval);
+
+            if (options === "yesno" || Array.isArray(options)) {
+              const btnContainer = document.createElement("div");
+              btnContainer.className = "option-buttons";
+              
+              const labels = options === "yesno" ? ["Yes", "No"] : options;
+            
+              labels.forEach(label => {
+                const btn = document.createElement("button");
+                btn.textContent = label;
+                btn.onclick = () => {
+                  userInput.value = label.toLowerCase();
+                  sendMessage();
+                  btnContainer.remove();
+                };
+                btnContainer.appendChild(btn);
+              });
+            
+              msg.appendChild(document.createElement("br"));
+              msg.appendChild(btnContainer);
+            }
+            
+
+            if (callback) callback();
+          }
+        }, 40);
+      } else {
+        msg.textContent = text;
+        chatlog.scrollTop = chatlog.scrollHeight;
+        if (callback) callback();
+      }
+    }
+
+    function sendMessage() {
+      const input = userInput.value.trim();
+      if (!input) return;
+
+      appendMessage("user", input);
+      processInput(input.toLowerCase());
+      userInput.value = "";
+    }
+
+    function askNext() {
+      const needsYesNo = [0, 2, 5].includes(step);
+      let options = null;
+      if ([0, 2, 5].includes(step)) options = "yesno";
+      else if (step === 4) options = ["Monthly", "Quarterly", "Yearly"];
+
+      appendMessage("bot", questions[step], null, options);
+
+    }
+
+    function processInput(input) {
+      switch (step) {
+        case 0:
+          if (input === "yes" || input === "no") {
+            responses.prepaymentInterest = input;
+            step = (input === "no") ? 5 : 1;
+            askNext();
+          } else {
+            appendMessage("bot", "Please answer Yes or No.");
+          }
+          break;
+
+        case 1:
+          if (!isNaN(parseInt(input))) {
+            responses.prepaymentAmount = input;
+            step = 2;
+            askNext();
+          } else {
+            appendMessage("bot", "Enter a valid amount in rupees.");
+          }
+          break;
+
+        case 2:
+          if (input === "yes" || input === "no") {
+            responses.stepUpInterest = input;
+            step = input === "y" ? 3 : 4;
+            if (input === "no") responses.stepUpPercent = "0";
+            askNext();
+          } else {
+            appendMessage("bot", "Please answer Yes or No.");
+          }
+          break;
+
+        case 3:
+          if (!isNaN(parseFloat(input))) {
+            responses.stepUpPercent = input;
+            step = 4;
+            askNext();
+          } else {
+            appendMessage("bot", "Enter a valid percentage.");
+          }
+          break;
+
+        case 4:
+          if (["monthly", "quarterly", "yearly"].includes(input)) {
+            responses.prepaymentFrequency = input;
+            step = 5;
+            askNext();
+          } else {
+            appendMessage("bot", "Choose monthly, quarterly, or yearly.");
+          }
+          break;
+
+        case 5:
+          if (input === "yes" || input === "no") {
+            responses.lumpSumInterest = input;
+            step = 6;
+            if (input === "no") {
+              responses.lumpSumAmount = "0";
+              showSummary();
+            } else {
+              askNext();
+            }
+          } else {
+            appendMessage("bot", "Please answer Yes or No.");
+          }
+          break;
+
+        case 6:
+          if (!isNaN(parseInt(input))) {
+            responses.lumpSumAmount = input;
+            showSummary();
+          } else {
+            appendMessage("bot", "Enter a valid amount in rupees.");
+          }
+          break;
+      }
+    }
+
+    function showSummary() {
+      let strategy = "Unable to determine strategy. Please review inputs.";
+
+      if (responses.prepaymentInterest === "no" && responses.lumpSumInterest === "no") {
+        strategy = "Standard Plan – No Prepayment";
+      } else if (responses.prepaymentInterest === "yes" && responses.stepUpInterest === "no" && responses.lumpSumInterest === "no") {
+        strategy = "Fixed Extra EMI Plan";
+      } else if (responses.prepaymentInterest === "yes" && responses.stepUpInterest === "yes" && parseFloat(responses.stepUpPercent) > 0 && responses.lumpSumInterest === "no") {
+        strategy = "Step-Up Prepayment Plan";
+      } else if (responses.prepaymentInterest === "no" && responses.lumpSumInterest === "yes") {
+        strategy = "Lump Sum at Flexible Intervals";
+      } else if (responses.prepaymentInterest === "yes" && responses.stepUpInterest === "no" && responses.lumpSumInterest === "yes") {
+        strategy = "Fixed EMI + Lump Sum";
+      } else if (responses.prepaymentInterest === "yes" && responses.stepUpInterest === "yes" && responses.lumpSumInterest === "yes") {
+        strategy = "Step-Up EMI + Lump Sum";
+      }
+
+      appendMessage("bot", `✅ Summary of your responses:\n💡 Recommended Strategy:\n${strategy}`, () => {
+        const detailsLink = document.createElement("div");
+        detailsLink.innerHTML = `<a href="https://example.com/details" target="_blank" style="color:#00f5ff; text-decoration: underline;">Analyze Your Loan</a>`;
+        chatlog.appendChild(detailsLink);
+        chatlog.scrollTop = chatlog.scrollHeight;
+      });
+    }
+
+    userInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+
+</body>
+</html>
