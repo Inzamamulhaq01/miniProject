@@ -35,8 +35,9 @@ if ($result->num_rows > 0) {
     // Number of months passed
     $startDate = new DateTime($loanData['start_date']);
     $now = new DateTime();
-    $monthsElapsed = ($now->format('Y') - $startDate->format('Y')) * 12 + ($now->format('m') - $startDate->format('m'));
+    $monthsElapsed = ($now->format('Y') - $startDate->format('Y')) * 12 + ($now->format('m') - $startDate->format('m')) + 1;
     $monthsElapsed = min($monthsElapsed, $tenureMonths); // avoid overrun
+    
 
     // Total paid so far
     $totalPaid = $emi * $monthsElapsed;
