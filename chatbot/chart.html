@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Loan Payment Breakdown</title>
+</head>
+<body>
+
+    <div>
+        <h1>Dynamic Loan Payment Breakdown</h1>
+
+        
+        <input hidden type="number" id="loanAmount" placeholder="Enter loan amount" required>
+
+        
+        <input hidden type="number" id="outstandingBalance" placeholder="Enter outstanding balance (leave empty if new loan)">
+
+     
+        <input hidden  type="number" id="interestRate" placeholder="Enter interest rate" required>
+
+     
+        <input hidden  type="number" id="loanTenure" placeholder="Enter loan tenure" required>
+
+  
+        <input hidden  type="number" id="stepUpRate" placeholder="Enter EMI step-up rate" required>
+
+       
+        <input hidden  type="number" id="monthlyPrepayment" placeholder="Enter prepayment amount">
+
+       
+        <select hidden  id="prepaymentFrequency">
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+        </select>
+
+        <input hidden  type="number" id="lumpSumPrepayment" placeholder="Enter lump sum prepayment amount">
+
+       
+        <input hidden  type="number" id="lumpSumMonth" placeholder="Enter which month to pay lump sum (e.g., 24)">
+
+        <button  hidden onclick="calculatePayments()">Calculate</button>
+    </div>
+
+    <h2>Annual Payment Breakdown</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Year</th>
+                <th>EMI Payment (₹)</th>
+                <th>Total Payment for Year (₹)</th>
+            </tr>
+        </thead>
+        <tbody id="paymentDetails"></tbody>
+    </table>
+
+    <h3>Savings Calculation</h3>
+    <p id="savingsDetails"></p>
+
+    <script>
+        function getQueryParams() {
+            const params = {};
+            const queryString = window.location.search.slice(1);
+            const pairs = queryString.split('&');
+
+            for (const pair of pairs) {
+                if (!pair) continue;
+                const [key, value] = pair.split('=');
+                params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+            }
+            return params;
+        }
+
+        window.onload = function () {
+            const params = getQueryParams();
+        
+            if (params.loanAmount) document.getElementById('loanAmount').value = params.loanAmount;
+            if (params.outstandingBalance) document.getElementById('outstandingBalance').value = params.outstandingBalance;
+            if (params.interestRate) document.getElementById('interestRate').value = params.interestRate;
+            if (params.loanTenure) document.getElementById('loanTenure').value = params.loanTenure;
+            if (params.stepUpRate) document.getElementById('stepUpRate').value = params.stepUpRate;
+            if (params.monthlyPrepayment) document.getElementById('monthlyPrepayment').value = params.monthlyPrepayment;
+            if (params.prepaymentFrequency) document.getElementById('prepaymentFrequency').value = params.prepaymentFrequency;
+            if (params.lumpSumPrepayment) document.getElementById('lumpSumPrepayment').value = params.lumpSumPrepayment;
+            if (params.lumpSumMonth) document.getElementById('lumpSumMonth').value = params.lumpSumMonth;
+        
+            // Auto-calculate only if key fields are present
+            if (params.loanAmount && params.interestRate && params.loanTenure && params.stepUpRate) {
+                calculatePayments();
+            }
+        };
+        
+
+        function calculatePayments() {
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+            const outstandingInput = document.getElementById('outstandingBalance').value;
+            const outstandingBalanceInput = outstandingInput ? parseFloat(outstandingInput) : loanAmount;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+            const loanTenure = parseInt(document.getElementById('loanTenure').value);
+            const stepUpRate = parseFloat(document.getElementById('stepUpRate').value) / 100;
+            const prepaymentAmount = parseFloat(document.getElementById('monthlyPrepayment').value) || 0;
+            const prepaymentFrequency = document.getElementById('prepaymentFrequency').value;
+            const lumpSumPrepayment = parseFloat(document.getElementById('lumpSumPrepayment').value) || 0;
+            const lumpSumMonth = parseInt(document.getElementById('lumpSumMonth').value) || null;
+
+            const monthlyInterestRate = interestRate / 12;
+            let outstandingBalance = outstandingBalanceInput;
+            let emi = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -(loanTenure * 12)));
+            let totalPaid = 0;
+            let year = 1;
+            let month = 1;
+            let paymentDetails = '';
+            let yearTotalPayment = 0;
+            const paymentDetailsElement = document.getElementById('paymentDetails');
+            paymentDetailsElement.innerHTML = '';
+
+            const originalTotalPayment = emi * 12 * loanTenure;
+
+            while (outstandingBalance > 0) {
+                const monthlyInterest = outstandingBalance * monthlyInterestRate;
+                const principalComponent = emi - monthlyInterest;
+
+                let extraPrepayment = 0;
+                if (prepaymentAmount > 0) {
+                    if (prepaymentFrequency === "monthly") {
+                        extraPrepayment = prepaymentAmount;
+                    } else if (prepaymentFrequency === "quarterly" && month % 3 === 0) {
+                        extraPrepayment = prepaymentAmount;
+                    } else if (prepaymentFrequency === "yearly" && month % 12 === 0) {
+                        extraPrepayment = prepaymentAmount;
+                    }
+                }
+
+                outstandingBalance -= (principalComponent + extraPrepayment);
+
+                if (lumpSumMonth && month === lumpSumMonth && lumpSumPrepayment > 0) {
+                    outstandingBalance -= lumpSumPrepayment;
+                    totalPaid += lumpSumPrepayment;
+                    yearTotalPayment += lumpSumPrepayment;
+                }
+
+                yearTotalPayment += emi + extraPrepayment;
+                totalPaid += emi + extraPrepayment;
+
+                if (outstandingBalance <= 0) {
+                    break;
+                }
+
+                if (month % 12 === 0) {
+                    paymentDetails += `
+                        <tr>
+                            <td>Year ${year}</td>
+                            <td>₹${emi.toFixed(2)}</td>
+                            <td>₹${yearTotalPayment.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    emi += emi * stepUpRate;
+                    year++;
+                    yearTotalPayment = 0;
+                }
+
+                month++;
+            }
+
+            if (yearTotalPayment > 0) {
+                paymentDetails += `
+                    <tr>
+                        <td>Year ${year}</td>
+                        <td>₹${emi.toFixed(2)}</td>
+                        <td>₹${yearTotalPayment.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+
+            paymentDetailsElement.innerHTML = paymentDetails;
+
+            const totalSavings = originalTotalPayment - totalPaid;
+            const savingsPercentage = (totalSavings / originalTotalPayment) * 100;
+            const savingsDetails = document.getElementById('savingsDetails');
+
+            savingsDetails.innerHTML = `
+                <strong>Original Total Payment (without reducing tenure):</strong> <b>₹${originalTotalPayment.toLocaleString()}</b> rupees<br>
+                <strong>Actual Total Payment (with faster closure):</strong> <b>₹${totalPaid.toLocaleString()}</b> rupees<br>
+                <strong>You Saved:</strong> <b>₹${totalSavings.toLocaleString()}</b> rupees 
+                (<b>${savingsPercentage.toFixed(2)}%</b> savings)
+            `;
+        }
+    </script>
+
+</body>
+</html>

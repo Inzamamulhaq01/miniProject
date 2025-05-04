@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic EMI Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #1c1c2b;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    input {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      width: 150px;
+    }
+    button {
+      background-color: #00e0ff;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    #chartContainer {
+      max-width: 1000px;
+      height: 600px;
+      margin: auto;
+      background: #282c3f;
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    #chartContainer {
+      animation: glow 3s ease-in-out infinite alternate;
+      box-shadow: 0 0 20px #00f5ff55;
+    }
+    
+    @keyframes glow {
+      from {
+        box-shadow: 0 0 10px #00f5ff22, 0 0 20px #00f5ff44;
+      }
+      to {
+        box-shadow: 0 0 25px #00f5ffaa, 0 0 35px #00f5ffcc;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>EMI Schedule Chart</h2>
+  <div>
+    <input id="principal" type="number" placeholder="Principal (₹)" />
+    <input id="rate" type="number" step="0.01" placeholder="Interest (%)" />
+    <input id="tenure" type="number" placeholder="Tenure (years)" />
+    <br />
+    <input id="startMonth" type="number" min="1" max="12" placeholder="Start Month (1-12)" />
+    <input id="startYear" type="number" placeholder="Start Year (e.g., 2025)" />
+    <br />
+    <button onclick="generateChart()">Generate Chart</button>
+  </div>
+
+  <div id="chartContainer">
+    <canvas id="emiChart"></canvas>
+  </div>
+
+  <script>
+    let chart;
+
+    function generateChart() {
+      const P = parseFloat(document.getElementById('principal').value); // Principal
+      const annualRate = parseFloat(document.getElementById('rate').value); // Annual interest rate
+      const years = parseInt(document.getElementById('tenure').value); // Loan tenure in years
+      const N = years * 12; // Total number of months
+      const r = annualRate / 12 / 100; // Monthly interest rate
+
+      // Get the start month and year from input
+      const startMonth = parseInt(document.getElementById('startMonth').value) - 1; // 0-indexed month
+      const startYear = parseInt(document.getElementById('startYear').value); // Starting year
+
+      // EMI Calculation
+      const EMI = P * r * Math.pow(1 + r, N) / (Math.pow(1 + r, N) - 1);
+
+      let principalData = [], interestData = [], balanceData = [], labels = [];
+      let balance = P;
+      let currentYear = startYear;
+
+      // Track each year's principal and interest payments
+      for (let y = 0; y < years; y++) {
+        let yearPrincipal = 0, yearInterest = 0;
+
+        // Calculate for each month in the year
+        for (let m = 0; m < 12; m++) {
+          const interest = balance * r; // Interest paid this month
+          const principal = EMI - interest; // Principal paid this month
+          balance -= principal; // Reduce the balance by the principal paid
+
+          yearInterest += interest;
+          yearPrincipal += principal;
+
+          // If balance becomes zero, stop further calculation
+          if (balance <= 0) {
+            balance = 0;
+            break;
+          }
+        }
+
+        // Add the labels with the starting year and month
+        labels.push(`${currentYear}`);
+        principalData.push(Math.round(yearPrincipal));
+        interestData.push(Math.round(yearInterest));
+        balanceData.push(Math.round(balance));
+
+        if (balance <= 0) break;
+
+        // Update the current year for the next iteration
+        currentYear++;
+      }
+
+      // Log data for debugging
+      console.log('Yearly Interest:', interestData);
+      console.log('Yearly Principal:', principalData);
+
+      // Update the chart with the correct data
+      const ctx = document.getElementById('emiChart').getContext('2d');
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Principal',
+              data: principalData,
+              backgroundColor: '#7ed957',
+              stack: 'EMI',
+            },
+            {
+              label: 'Interest',
+              data: interestData,
+              backgroundColor: '#ff914d',
+              stack: 'EMI',
+            },
+            {
+              label: 'Balance',
+              data: balanceData,
+              type: 'line',
+              borderColor: '#ff4d6d',
+              borderWidth: 3,
+              fill: false,
+              yAxisID: 'balance',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,       // 1 second animation
+            easing: 'easeOutQuart' // smooth deceleration
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'EMI Breakdown by Year',
+              color: 'white',
+              font: { size: 18 }
+            },
+            legend: {
+              labels: { color: 'white' }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: 'white' }
+            },
+            y: {
+              stacked: true,
+              position: 'left',
+              ticks: { color: 'white' },
+              title: {
+                display: true,
+                text: 'EMI Payment / Year',
+                color: 'white'
+              }
+            },
+            balance: {
+              position: 'right',
+              beginAtZero: true,
+              ticks: { color: '#ff4d6d' },
+              grid: { drawOnChartArea: false },
+              title: {
+                display: true,
+                text: 'Remaining Balance',
+                color: '#ff4d6d'
+              }
+            }
+          }
+        }
+      });
+    }
+      // 🔍 Parse URL query parameters
+  function getQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      principal: parseFloat(params.get('principal')),
+      rate: parseFloat(params.get('rate')),
+      tenure: parseInt(params.get('tenure')),
+      startMonth: parseInt(params.get('startMonth')),
+      startYear: parseInt(params.get('startYear'))
+    };
+  }
+
+  // 🧠 Prefill form inputs from query parameters and auto-generate chart
+  window.onload = () => {
+    const params = getQueryParams();
+    if (params.principal && params.rate && params.tenure && params.startMonth && params.startYear) {
+      document.getElementById('principal').value = params.principal;
+      document.getElementById('rate').value = params.rate;
+      document.getElementById('tenure').value = params.tenure;
+      document.getElementById('startMonth').value = params.startMonth;
+      document.getElementById('startYear').value = params.startYear;
+      generateChart();
+    }
+  };
+
+  
+  </script>
+</body>
+</html>

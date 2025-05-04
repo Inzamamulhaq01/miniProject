@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Loan Chart Animation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #000000, #0f0f2b);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      color: #00f5ff;
+      text-shadow: 0 0 8px #00f5ff;
+      margin-bottom: 20px;
+      animation: pulse 3s infinite;
+    }
+
+    .chart-container {
+      width: 90%;
+      max-width: 700px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(0, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      margin-bottom: 20px;
+    }
+
+    canvas {
+      width: 600px !important;
+      height: 400px !important;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.2);
+    }
+
+    @keyframes pulse {
+      0% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+      50% {
+        text-shadow: 0 0 20px #00f5ff, 0 0 30px #00f5ff88;
+      }
+      100% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Loan Repayment Strategy Comparison</h1>
+
+  <!-- Without Strategy Chart -->
+  <div class="chart-container">
+    <h3 style="color: #00f5ff;">Without Strategy</h3>
+    <canvas id="loanChartWithoutStrategy"></canvas>
+  </div>
+
+  <!-- With Strategy Chart -->
+  <div class="chart-container">
+    <h3 style="color: #00f5ff;">With Strategy</h3>
+    <canvas id="loanChartWithStrategy"></canvas>
+  </div>
+
+  <script>
+    // Sample data for 'With Strategy' (can be dynamic)
+    const loanDataWithStrategy = {
+      labels: ['Interest Paid', 'Total Paid', 'Tenure (months)'],
+      data: [280000, 1280000, 200], // Example values
+      backgroundColor: 'rgba(0, 255, 255, 0.6)',
+      borderColor: 'rgba(0, 255, 255, 1)'
+    };
+
+    // EMI Calculation for 'Without Strategy'
+    function calculateEMI(principal, rate, tenure) {
+      const r = rate / 100 / 12; // Monthly rate
+      const n = tenure; // Number of months
+      const emi = (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      return emi;
+    }
+
+    function calculateLoanDataWithoutStrategy(principal, rate, tenure) {
+      const emi = calculateEMI(principal, rate, tenure);
+      const totalPaid = emi * tenure;
+      const interestPaid = totalPaid - principal;
+
+      return {
+        labels: ['Interest Paid', 'Total Paid', 'Tenure (months)'],
+        data: [interestPaid, totalPaid, tenure],
+        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+        borderColor: 'rgba(255, 99, 132, 1)'
+      };
+    }
+
+    // Sample loan data for calculation (can be dynamic)
+    const principal = 1000000; // Principal amount in currency (example)
+    const rate = 7; // Annual interest rate (example)
+    const tenure = 240; // Loan tenure in months (example)
+
+    const loanDataWithoutStrategy = calculateLoanDataWithoutStrategy(principal, rate, tenure);
+
+    // Create charts dynamically using the above data
+    function createChart(ctx, data, label) {
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: label,
+            data: data.data,
+            backgroundColor: data.backgroundColor,
+            borderColor: data.borderColor,
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,
+            easing: 'easeOutCubic'
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#00f5ff',
+                font: { size: 14 }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#ffffff' },
+              grid: { color: 'rgba(0,255,255,0.2)' }
+            },
+            y: {
+              ticks: { color: '#ffffff' },
+              grid: { color: 'rgba(0,255,255,0.1)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Initialize charts with dynamic data
+    const ctxWithoutStrategy = document.getElementById('loanChartWithoutStrategy').getContext('2d');
+    const ctxWithStrategy = document.getElementById('loanChartWithStrategy').getContext('2d');
+
+    createChart(ctxWithoutStrategy, loanDataWithoutStrategy, 'Without Strategy');
+    createChart(ctxWithStrategy, loanDataWithStrategy, 'With Strategy');
+
+  </script>
+
+</body>
+</html>
