@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Loan Chart Animation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #000000, #0f0f2b);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      color: #00f5ff;
+      text-shadow: 0 0 8px #00f5ff;
+      margin-bottom: 20px;
+      animation: pulse 3s infinite;
+    }
+
+    .chart-container {
+      width: 90%;
+      height: 50%;
+      max-width: 700px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(0, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    canvas {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.2);
+    }
+
+    @keyframes pulse {
+      0% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+      50% {
+        text-shadow: 0 0 20px #00f5ff, 0 0 30px #00f5ff88;
+      }
+      100% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Loan Repayment Strategy Comparison</h1>
+
+  <div class="chart-container">
+    <canvas id="loanChart"></canvas>
+  </div>
+
+  <div class="chart-container" style="margin-top: 30px;">
+    <canvas id="tenureChart"></canvas>
+  </div>
+
+  <div id="chart-container" style="margin-top: 30px; width:50%;height:500px">
+    <canvas id="emiChart"></canvas>
+  </div>
+
+  <script>
+    // Initialize the chart object with empty values initially
+    let loanChart, tenureChart;
+    let emiChart; 
+
+    function getQueryParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const loanAmount = parseFloat(urlParams.get('loanAmount'));
+      const outstandingBalanceInput = parseFloat(urlParams.get('outstandingBalance')) || loanAmount;
+      const interestRate = parseFloat(urlParams.get('interestRate')) / 100;
+      const loanTenure = parseInt(urlParams.get('loanTenure'));
+      const startDate = parseInt(urlParams.get('startDate'));
+      const startMonth = parseInt(urlParams.get('startMonth')) - 1; // 0-indexed month
+      const startYear = parseInt(urlParams.get('startYear'));
+      const stepUpRate = parseFloat(urlParams.get('stepUpRate')) / 100;
+      const prepaymentAmount = parseFloat(urlParams.get('monthlyPrepayment')) || 0;
+      const prepaymentFrequency = urlParams.get('prepaymentFrequency');
+      const lumpSumPrepayment = parseFloat(urlParams.get('lumpSumPrepayment')) || 0;
+      const lumpSumMonth = parseInt(urlParams.get('lumpSumMonth')) || 1;
+
+      // Pass values for calculations
+      calculateSavings(loanAmount, outstandingBalanceInput, interestRate, loanTenure, stepUpRate, prepaymentAmount, prepaymentFrequency, lumpSumPrepayment, lumpSumMonth);
+      generateChart(loanAmount,interestRate,loanTenure,startMonth,startYear);
+    }
+
+    function calculateSavings(loanAmount, outstandingBalance, interestRate, loanTenure, stepUpRate, prepaymentAmount, prepaymentFrequency, lumpSumPrepayment, lumpSumMonth) {
+      const monthlyInterestRate = interestRate / 12;
+      let emi = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -(loanTenure * 12)));
+      let totalPaid = 0;
+      const originalTotalPayment = emi * 12 * loanTenure;
+      let month = 1;
+
+      while (outstandingBalance > 0) {
+        const monthlyInterest = outstandingBalance * monthlyInterestRate;
+        const principalComponent = emi - monthlyInterest;
+
+        let extraPrepayment = 0;
+        if (prepaymentAmount > 0) {
+          if (prepaymentFrequency === "monthly") {
+            extraPrepayment = prepaymentAmount;
+          } else if (prepaymentFrequency === "quarterly" && month % 3 === 0) {
+            extraPrepayment = prepaymentAmount;
+          } else if (prepaymentFrequency === "yearly" && month % 12 === 0) {
+            extraPrepayment = prepaymentAmount;
+          }
+        }
+
+        outstandingBalance -= (principalComponent + extraPrepayment);
+
+        if (lumpSumMonth && month === lumpSumMonth && lumpSumPrepayment > 0) {
+          outstandingBalance -= lumpSumPrepayment;
+          totalPaid += lumpSumPrepayment;
+        }
+
+        totalPaid += emi + extraPrepayment;
+
+        if (outstandingBalance <= 0) break;
+
+        if (month % 12 === 0) {
+          emi += emi * stepUpRate;
+        }
+
+        month++;
+      }
+
+      const totalSavings = originalTotalPayment - totalPaid;
+      const savingsPercentage = (totalSavings / originalTotalPayment) * 100;
+      const originalTenureMonths = loanTenure * 12;
+      const actualTenureMonths = month;
+      const reducedTenure = originalTenureMonths - actualTenureMonths;
+      
+      const totalInterestWithoutStrategy = originalTotalPayment - loanAmount;
+      const totalInterestWithStrategy = totalPaid - loanAmount;
+      
+      updateChart(
+        totalInterestWithoutStrategy,
+        originalTotalPayment,
+        totalInterestWithStrategy,
+        totalPaid,
+        originalTenureMonths / 12,
+        actualTenureMonths / 12
+      );
+    }
+
+
+    function generateChart(P, annualRate, years, startMonth, startYear) {
+      const N = years * 12; // Total number of months
+      const r = annualRate / 12; // Monthly interest rate
+    
+      // EMI Calculation
+      const EMI = P * r * Math.pow(1 + r, N) / (Math.pow(1 + r, N) - 1);
+    
+      let principalData = [], interestData = [], balanceData = [], labels = [];
+      let balance = P;
+      let currentYear = startYear;
+    
+      // Track each year's principal and interest payments
+      for (let y = 0; y < years; y++) {
+        let yearPrincipal = 0, yearInterest = 0;
+    
+        // Calculate for each month in the year
+        for (let m = 0; m < 12; m++) {
+          const interest = balance * r; // Interest paid this month
+          const principal = EMI - interest; // Principal paid this month
+          balance -= principal; // Reduce the balance by the principal paid
+    
+          yearInterest += interest;
+          yearPrincipal += principal;
+    
+          // If balance becomes zero, stop further calculation
+          if (balance <= 0) {
+            balance = 0;
+            break;
+          }
+        }
+    
+        // Add the labels with the starting year and month
+        labels.push(`${currentYear}`);
+        principalData.push(Math.round(yearPrincipal));
+        interestData.push(Math.round(yearInterest));
+        balanceData.push(Math.round(balance));
+    
+        if (balance <= 0) break;
+    
+        // Update the current year for the next iteration
+        currentYear++;
+      }
+    
+      // Log data for debugging
+    
+      // Update the chart with the correct data
+      const ctx = document.getElementById('emiChart').getContext('2d');
+    
+      loanChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Principal',
+              data: principalData,
+              backgroundColor: '#7ed957',
+              stack: 'EMI',
+            },
+            {
+              label: 'Interest',
+              data: interestData,
+              backgroundColor: '#ff914d',
+              stack: 'EMI',
+            },
+            {
+              label: 'Balance',
+              data: balanceData,
+              type: 'line',
+              borderColor: '#ff4d6d',
+              borderWidth: 3,
+              fill: false,
+              yAxisID: 'balance',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,       // 1 second animation
+            easing: 'easeOutQuart' // smooth deceleration
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'EMI Breakdown by Year',
+              color: 'white',
+              font: { size: 18 }
+            },
+            legend: {
+              labels: { color: 'white' }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: 'white' }
+            },
+            y: {
+              stacked: true,
+              position: 'left',
+              ticks: { color: 'white' },
+              title: {
+                display: true,
+                text: 'EMI Payment / Year',
+                color: 'white'
+              }
+            },
+            balance: {
+              position: 'right',
+              beginAtZero: true,
+              ticks: { color: '#ff4d6d' },
+              grid: { drawOnChartArea: false },
+              title: {
+                display: true,
+                text: 'Remaining Balance',
+                color: '#ff4d6d'
+              }
+            }
+          }
+        }
+      });
+    }
+
+
+
+    function updateChart(intWithout, totalWithout, intWith, totalWith, originalTenure, reducedTenure) {
+        const ctx1 = document.getElementById('loanChart').getContext('2d');
+        const ctx2 = document.getElementById('tenureChart').getContext('2d');
+      
+        // Main loan chart
+        if (!loanChart) {
+          loanChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+              labels: ['Interest Paid', 'Total Paid'],
+              datasets: [
+                {
+                  label: 'Without Strategy',
+                  data: [intWithout, totalWithout],
+                  backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                  borderColor: 'rgba(255, 99, 132, 1)',
+                  borderWidth: 2,
+                  borderRadius: 8
+                },
+                {
+                  label: 'With Strategy',
+                  data: [intWith, totalWith],
+                  backgroundColor: 'rgba(0, 255, 255, 0.6)',
+                  borderColor: 'rgba(0, 255, 255, 1)',
+                  borderWidth: 2,
+                  borderRadius: 8
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: {
+                duration: 1000,
+                easing: 'easeOutCubic'
+              },
+              plugins: {
+                legend: {
+                  labels: {
+                    color: '#00f5ff',
+                    font: { size: 14 }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(0,255,255,0.2)' }
+                },
+                y: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(0,255,255,0.1)' },
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        } else {
+          loanChart.data.datasets[0].data = [intWithout, totalWithout];
+          loanChart.data.datasets[1].data = [intWith, totalWith];
+          loanChart.update();
+        }
+      
+        // Tenure chart
+        if (!tenureChart) {
+          tenureChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+              labels: ['Loan Tenure (months)'],
+              datasets: [
+                {
+                  label: 'Without Strategy',
+                  data: [originalTenure],
+                  backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                  borderColor: 'rgba(255, 99, 132, 1)',
+                  borderWidth: 2,
+                  borderRadius: 8
+                },
+                {
+                  label: 'With Strategy',
+                  data: [reducedTenure],
+                  backgroundColor: 'rgba(0, 255, 255, 0.6)',
+                  borderColor: 'rgba(0, 255, 255, 1)',
+                  borderWidth: 2,
+                  borderRadius: 8
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: {
+                duration: 1000,
+                easing: 'easeOutCubic'
+              },
+              plugins: {
+                legend: {
+                  labels: {
+                    color: '#00f5ff',
+                    font: { size: 14 }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(0,255,255,0.2)' }
+                },
+                y: {
+                  ticks: { color: '#ffffff' },
+                  grid: { color: 'rgba(0,255,255,0.1)' },
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        } else {
+          tenureChart.data.datasets[0].data = [originalTenure];
+          tenureChart.data.datasets[1].data = [reducedTenure];
+          tenureChart.update();
+        }
+      }
+    // Call the function to load data and calculate savings on page load
+    getQueryParams();
+  </script>
+</body>
+</html>

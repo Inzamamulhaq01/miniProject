@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Payment Strategy Advisor</title>
+</head>
+<body>
+    <h2>Open Console (F12) to Begin Loan Strategy Advisor</h2>
+
+    <script>
+        // EMI and Interest Calculation Functions
+        function calculateEMI(P, R, N) {
+            const r = R / (12 * 100);
+            return P * r * Math.pow(1 + r, N) / (Math.pow(1 + r, N) - 1);
+        }
+
+        function ask(promptText, options) {
+            const input = prompt(`${promptText}\n${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}`);
+            const idx = parseInt(input);
+            return options[idx - 1];
+        }
+
+        function askInput(message) {
+            return parseFloat(prompt(message));
+        }
+
+        function strategyAdvisor() {
+            console.clear();
+            console.log("🏠 Loan Payment Strategy Advisor");
+
+            const principal = askInput("Enter loan amount (₹):");
+            const rate = askInput("Enter annual interest rate (%):");
+            const years = askInput("Loan tenure (years):");
+            const months = years * 12;
+            const baseEMI = calculateEMI(principal, rate, months);
+            const baseInterest = baseEMI * months - principal;
+
+            console.log(`📌 EMI: ₹${baseEMI.toFixed(2)} | Total Interest: ₹${baseInterest.toFixed(2)}`);
+
+            // Ask for payment preferences
+            const incomeFrequency = ask("How often do you receive income?", ["Monthly", "Quarterly", "Yearly", "Infrequently"]);
+            const regularPayments = ask("Can you commit to regular payments (e.g., monthly, quarterly)?", ["Yes", "No"]);
+            const lumpSumOption = ask("Would you prefer to make large lump sum payments occasionally?", ["Yes", "No"]);
+            const refinancingOption = ask("Would you consider refinancing to lower your interest rate?", ["Yes", "No"]);
+
+            let strategy = "";
+            let newInterest = baseInterest;
+
+            // Decision-making based on user preferences
+            if (incomeFrequency === "Monthly") {
+                if (regularPayments === "Yes") {
+                    strategy = "Optimal: Monthly Payments + Extra EMI";
+                    const extraEMI = askInput("How much extra EMI can you pay monthly (₹)?");
+                    newInterest = simulateExtraEMI(principal, rate, months, baseEMI + extraEMI);
+                } else if (lumpSumOption === "Yes") {
+                    strategy = "Optimal: Lump Sum Payments + Reduce Principal";
+                    const lumpSum = askInput("Enter lump sum amount (₹) for one-time payment?");
+                    const when = askInput("After how many months will you make the lump sum payment?");
+                    newInterest = simulateLumpSum(principal, rate, months, baseEMI, lumpSum, when);
+                }
+            } else if (incomeFrequency === "Quarterly") {
+                if (regularPayments === "Yes") {
+                    strategy = "Optimal: Quarterly Payments + Extra Payment Option";
+                    const extraQuarterly = askInput("How much extra per quarter can you pay (₹)?");
+                    newInterest = simulateExtraQuarterly(principal, rate, months, baseEMI, extraQuarterly);
+                } else {
+                    strategy = "Optimal: Lump Sum Payments + Quarterly Intervals";
+                    const lumpSum = askInput("Enter lump sum amount (₹)?");
+                    const when = askInput("After how many months will you pay lump sum?");
+                    newInterest = simulateLumpSum(principal, rate, months, baseEMI, lumpSum, when);
+                }
+            } else if (incomeFrequency === "Yearly") {
+                if (lumpSumOption === "Yes") {
+                    strategy = "Optimal: Yearly Lump Sum Payments";
+                    const lumpSum = askInput("Enter lump sum amount (₹)?");
+                    const when = askInput("After how many months will you pay lump sum?");
+                    newInterest = simulateLumpSum(principal, rate, months, baseEMI, lumpSum, when);
+                } else {
+                    strategy = "Consider: Yearly Payments + Refinancing";
+                    const newRate = askInput("New refinance rate (%)?");
+                    const after = askInput("Refinance after how many months?");
+                    newInterest = simulateRefinance(principal, rate, newRate, months, after);
+                }
+            } else if (incomeFrequency === "Infrequently") {
+                if (refinancingOption === "Yes") {
+                    strategy = "Consider: Refinance + Lump Sum Payments";
+                    const newRate = askInput("New refinance rate (%)?");
+                    const lumpSum = askInput("Enter lump sum amount (₹)?");
+                    const when = askInput("After how many months will you make the lump sum?");
+                    newInterest = simulateRefinanceWithLump(principal, rate, newRate, months, lumpSum, when);
+                } else {
+                    strategy = "Consider: Making Lump Sum Payments Only";
+                    const lumpSum = askInput("Enter lump sum amount (₹)?");
+                    const when = askInput("After how many months will you make the lump sum?");
+                    newInterest = simulateLumpSum(principal, rate, months, baseEMI, lumpSum, when);
+                }
+            }
+
+            const saved = baseInterest - newInterest;
+            console.log(`\n🎯 Recommended Strategy: ${strategy}`);
+            console.log(`💰 Estimated New Interest: ₹${newInterest.toFixed(2)}`);
+            console.log(`🎉 Savings from Strategy: ₹${saved.toFixed(2)}`);
+            alert(`Strategy: ${strategy}\nSaved: ₹${saved.toFixed(2)}\nCheck console for full breakdown.`);
+        }
+
+        // Strategy Simulations
+        function simulateExtraEMI(P, R, N, newEMI) {
+            const r = R / (12 * 100);
+            let balance = P, total = 0, count = 0;
+            while (balance > 0 && count < N) {
+                const interest = balance * r;
+                const principal = newEMI - interest;
+                balance -= principal;
+                total += newEMI;
+                count++;
+            }
+            return total - P;
+        }
+
+        
+
+        function simulateLumpSum(P, R, N, emi, lump, monthLump) {
+            const r = R / (12 * 100);
+            let balance = P, total = 0;
+            for (let i = 1; i <= N; i++) {
+                const interest = balance * r;
+                const principal = emi - interest;
+                balance -= principal;
+                total += emi;
+                if (i === monthLump) {
+                    balance -= lump;
+                    total += lump;
+                }
+                if (balance <= 0) break;
+            }
+            return total - P;
+        }
+
+        function simulateEarlyClosure(P, R, N, emi, closeAfter) {
+          const r = R / (12 * 100);
+          let balance = P, total = 0;
+      
+          for (let i = 1; i <= closeAfter; i++) {
+              const interest = balance * r;
+              const principal = emi - interest;
+              balance -= principal;
+              total += emi;
+          }
+      
+          total += balance; // Pay off remaining principal in lump sum
+          return total - P;
+      }
+      
+
+        function simulateRefinance(P, oldRate, newRate, N, afterMonths) {
+            const r1 = oldRate / (12 * 100), r2 = newRate / (12 * 100);
+            const emiOld = calculateEMI(P, oldRate, N);
+            let balance = P, total = 0;
+
+            for (let i = 1; i <= afterMonths; i++) {
+                const interest = balance * r1;
+                const principal = emiOld - interest;
+                balance -= principal;
+                total += emiOld;
+            }
+
+            const emiNew = calculateEMI(balance, newRate, N - afterMonths);
+            for (let i = 1; i <= N - afterMonths; i++) {
+                const interest = balance * r2;
+                const principal = emiNew - interest;
+                balance -= principal;
+                total += emiNew;
+                if (balance <= 0) break;
+            }
+
+            return total - P;
+        }
+
+        function simulateRefinanceWithLump(P, oldRate, newRate, N, lump, when) {
+            const r1 = oldRate / (12 * 100), r2 = newRate / (12 * 100);
+            const emiOld = calculateEMI(P, oldRate, N);
+            let balance = P, total = 0;
+
+            for (let i = 1; i <= when; i++) {
+                const interest = balance * r1;
+                const principal = emiOld - interest;
+                balance -= principal;
+                total += emiOld;
+            }
+
+            const emiNew = calculateEMI(balance, newRate, N - when);
+            for (let i = 1; i <= N - when; i++) {
+                const interest = balance * r2;
+                const principal = emiNew - interest;
+                balance -= principal;
+                total += emiNew;
+                if (balance <= 0) break;
+            }
+
+            balance -= lump;
+            total += lump;
+
+            return total - P;
+        }
+
+        strategyAdvisor();
+    </script>
+</body>
+</html>

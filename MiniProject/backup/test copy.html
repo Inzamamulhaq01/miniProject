@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EMI Schedule Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #1c1c2b;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    input {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+      width: 150px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #00f5ff;
+      border: none;
+      border-radius: 6px;
+      color: #000;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #chart-container {
+      margin-top: 30px;
+      width: 70%;
+      height: 600px; /* Increased height */
+      background: #2b2b3c;
+      border-radius: 12px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>EMI Schedule Chart</h2>
+  <input type="number" id="principal" placeholder="Principal (e.g. 5000000)" />
+  <input type="number" id="rate" placeholder="Interest % (e.g. 8)" />
+  <input type="number" id="years" placeholder="Tenure (Years)" />
+  <br>
+  <button onclick="generateChart()">Generate Chart</button>
+
+  <div id="chart-container">
+    <canvas id="emiChart"></canvas>
+  </div>
+
+  <script>
+    let chart;
+
+    function generateChart() {
+      const principal = parseFloat(document.getElementById("principal").value);
+      const annualRate = parseFloat(document.getElementById("rate").value);
+      const years = parseInt(document.getElementById("years").value);
+
+      const monthlyRate = annualRate / 12 / 100;
+      const totalMonths = years * 12;
+
+      const emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) /
+                  (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
+      let balance = principal;
+      const principalData = [];
+      const interestData = [];
+      const balanceData = [];
+      const labels = [];
+
+      const currentYear = new Date().getFullYear();
+      for (let y = 0; y < years; y++) {
+        let principalYear = 0;
+        let interestYear = 0;
+
+        for (let m = 0; m < 12; m++) {
+          if (balance <= 0) break;
+          const interest = balance * monthlyRate;
+          const principalComponent = emi - interest;
+          principalYear += principalComponent;
+          interestYear += interest;
+          balance -= principalComponent;
+        }
+
+        principalData.push(Math.round(principalYear));
+        interestData.push(Math.round(interestYear));
+        balanceData.push(Math.round(Math.max(balance, 0)));
+        labels.push(currentYear + y);
+      }
+
+      if (chart) chart.destroy();
+
+      const ctx = document.getElementById("emiChart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Principal',
+              data: principalData,
+              backgroundColor: '#90ee90',
+              stack: 'stack1',
+              barPercentage: 0.9,
+              categoryPercentage: 0.8
+            },
+            {
+              label: 'Interest',
+              data: interestData,
+              backgroundColor: '#ffa07a',
+              stack: 'stack1',
+              barPercentage: 0.9,
+              categoryPercentage: 0.8
+            },
+            {
+              label: 'Balance',
+              data: balanceData,
+              type: 'line',
+              yAxisID: 'y1',
+              borderColor: '#ff5b8d',
+              backgroundColor: '#ff5b8d',
+              fill: false,
+              tension: 0.4,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true,
+              offset: true,
+              ticks: { color: '#fff' },
+              grid: { color: 'rgba(255,255,255,0.1)' }
+            },
+            y: {
+              stacked: true,
+              ticks: { color: '#fff' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              title: {
+                display: true,
+                text: 'EMI Payment / Year',
+                color: '#fff'
+              }
+            },
+            y1: {
+              position: 'right',
+              beginAtZero: true,
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#ff5b8d' },
+              title: {
+                display: true,
+                text: 'Remaining Balance',
+                color: '#ff5b8d'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#fff'
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

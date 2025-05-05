@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Tenure Savings Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        label { display: block; margin-top: 10px; }
+        input, select { width: 300px; padding: 8px; margin-top: 5px; }
+        button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+        .result { margin-top: 20px; font-weight: bold; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<h1>Loan Tenure Savings Calculator</h1>
+
+<form id="loanForm">
+    <label>Original Loan Amount (₹):
+        <input type="number" id="loanAmount" required>
+    </label>
+
+    <label>Outstanding Loan Amount (₹):
+        <input type="number" id="outstandingAmount" required>
+    </label>
+
+    <label>Current EMI (₹):
+        <input type="number" id="emi" required>
+    </label>
+
+    <label>Interest Rate (% per annum):
+        <input type="number" id="interestRate" step="0.01" required>
+    </label>
+
+    <label>Original Tenure (years):
+        <input type="number" id="originalTenure" required>
+    </label>
+
+    <label>EMIs Paid So Far (months):
+        <input type="number" id="emisPaid" required>
+    </label>
+
+    <label>Yearly EMI Increase (%):
+        <input type="number" id="emiIncrease" value="0">
+    </label>
+
+    <label>Regular Prepayment Amount (₹):
+        <input type="number" id="regularPrepay" value="0">
+    </label>
+
+    <label>Prepayment Frequency:
+        <select id="prepayFrequency">
+            <option value="0">No Regular Prepayment</option>
+            <option value="12">Monthly</option>
+            <option value="3">Quarterly</option>
+            <option value="1">Yearly</option>
+        </select>
+    </label>
+
+    <label>Lump Sum Prepayment Amount (₹):
+        <input type="number" id="lumpSumPrepay" value="0">
+    </label>
+
+    <label>When will you do Lump Sum Prepayment? (in months from now):
+        <input type="number" id="lumpSumMonth" value="0">
+    </label>
+
+    <button type="button" onclick="calculateTenureSavings()">Calculate Tenure Saved</button>
+</form>
+
+<div class="result" id="result"></div>
+
+<script>
+function calculateTenureSavings() {
+    const P = Number(document.getElementById('outstandingAmount').value);
+    const r = Number(document.getElementById('interestRate').value) / 12 / 100;
+    const emi = Number(document.getElementById('emi').value);
+    const originalTenure = Number(document.getElementById('originalTenure').value) * 12;
+    const emisPaid = Number(document.getElementById('emisPaid').value);
+    const emiIncrease = Number(document.getElementById('emiIncrease').value);
+    const regularPrepay = Number(document.getElementById('regularPrepay').value);
+    const prepayFrequency = Number(document.getElementById('prepayFrequency').value);
+    const lumpSumPrepay = Number(document.getElementById('lumpSumPrepay').value);
+    const lumpSumMonth = Number(document.getElementById('lumpSumMonth').value);
+
+    let month = 0;
+    let balance = P;
+    let newEmi = emi;
+
+    while (balance > 0) {
+        month++;
+
+        // EMI step-up yearly
+        if (month % 12 === 0 && emiIncrease > 0) {
+            newEmi += newEmi * (emiIncrease / 100);
+        }
+
+        // Lump sum prepayment
+        if (month === lumpSumMonth && lumpSumPrepay > 0) {
+            balance -= lumpSumPrepay;
+        }
+
+        // Regular prepayment
+        if (prepayFrequency !== 0 && month % prepayFrequency === 0 && regularPrepay > 0) {
+            balance -= regularPrepay;
+        }
+
+        // EMI payment
+        let interest = balance * r;
+        let principal = newEmi - interest;
+
+        if (principal <= 0) {
+            document.getElementById('result').innerText = "EMI too low to cover interest! Increase EMI.";
+            return;
+        }
+
+        balance -= principal;
+
+        if (balance < 0) {
+            balance = 0;
+        }
+    }
+
+    let newTenure = month;
+    let tenureSaved = (originalTenure - emisPaid) - newTenure;
+
+    document.getElementById('result').innerText =
+        `✅ Estimated New Tenure: ${Math.floor(newTenure/12)} years ${newTenure%12} months\n` +
+        `🎯 Tenure Saved: ${Math.floor(tenureSaved/12)} years ${tenureSaved%12} months`;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Loan Chart Animation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #000000, #0f0f2b);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      color: #00f5ff;
+      text-shadow: 0 0 8px #00f5ff;
+      margin-bottom: 20px;
+      animation: pulse 3s infinite;
+    }
+
+    .chart-container {
+      width: 90%;
+      height: 50%;
+      max-width: 700px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(0, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    canvas {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.2);
+    }
+
+    @keyframes pulse {
+      0% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+      50% {
+        text-shadow: 0 0 20px #00f5ff, 0 0 30px #00f5ff88;
+      }
+      100% {
+        text-shadow: 0 0 8px #00f5ff;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Loan Repayment Strategy Comparison</h1>
+
+  <div class="chart-container">
+    <canvas id="loanChart"></canvas>
+  </div>
+
+  <script>
+
+    
+    function getQueryParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+    
+      const loanAmount = parseFloat(urlParams.get('loanAmount'));
+      const outstandingBalanceInput = parseFloat(urlParams.get('outstandingBalance')) || loanAmount;
+      const interestRate = parseFloat(urlParams.get('interestRate')) / 100;
+      const loanTenure = parseInt(urlParams.get('loanTenure'));
+      const stepUpRate = parseFloat(urlParams.get('stepUpRate')) / 100;
+      const prepaymentAmount = parseFloat(urlParams.get('monthlyPrepayment')) || 0;
+      const prepaymentFrequency = urlParams.get('prepaymentFrequency');
+      const lumpSumPrepayment = parseFloat(urlParams.get('lumpSumPrepayment')) || 0;
+      const lumpSumMonth = parseInt(urlParams.get('lumpSumMonth')) || 1;
+    
+      // Now you can pass these values to your calculation function
+      calculateSavings(loanAmount, outstandingBalanceInput, interestRate, loanTenure, stepUpRate, prepaymentAmount, prepaymentFrequency, lumpSumPrepayment, lumpSumMonth);
+    }
+    
+    function calculateSavings(loanAmount, outstandingBalance, interestRate, loanTenure, stepUpRate, prepaymentAmount, prepaymentFrequency, lumpSumPrepayment, lumpSumMonth) {
+      const monthlyInterestRate = interestRate / 12;
+      let emi = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -(loanTenure * 12)));
+      let totalPaid = 0;
+      const originalTotalPayment = emi * 12 * loanTenure;
+      let month = 1;
+    
+      while (outstandingBalance > 0) {
+        const monthlyInterest = outstandingBalance * monthlyInterestRate;
+        const principalComponent = emi - monthlyInterest;
+    
+        let extraPrepayment = 0;
+        if (prepaymentAmount > 0) {
+          if (prepaymentFrequency === "monthly") {
+            extraPrepayment = prepaymentAmount;
+          } else if (prepaymentFrequency === "quarterly" && month % 3 === 0) {
+            extraPrepayment = prepaymentAmount;
+          } else if (prepaymentFrequency === "yearly" && month % 12 === 0) {
+            extraPrepayment = prepaymentAmount;
+          }
+        }
+    
+        outstandingBalance -= (principalComponent + extraPrepayment);
+    
+        if (lumpSumMonth && month === lumpSumMonth && lumpSumPrepayment > 0) {
+          outstandingBalance -= lumpSumPrepayment;
+          totalPaid += lumpSumPrepayment;
+        }
+    
+        totalPaid += emi + extraPrepayment;
+    
+        if (outstandingBalance <= 0) break;
+    
+        if (month % 12 === 0) {
+          emi += emi * stepUpRate;
+        }
+    
+        month++;
+      }
+    
+      const totalSavings = originalTotalPayment - totalPaid;
+      const savingsPercentage = (totalSavings / originalTotalPayment) * 100;
+    
+      // Logging the variables
+      console.log('Original Total Payment (without reducing tenure): ₹' + originalTotalPayment.toLocaleString());
+      console.log('Actual Total Payment (with faster closure): ₹' + totalPaid.toLocaleString());
+      console.log('You Saved: ₹' + totalSavings.toLocaleString());
+      console.log('Savings Percentage: ' + savingsPercentage.toFixed(2) + '%');
+    
+    }
+    
+    // Call this function on page load
+   getQueryParams();
+  
+
+   
+    const ctx = document.getElementById('loanChart').getContext('2d');
+
+    const loanChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Interest Paid', 'Total Paid', 'Tenure (months)'],
+          datasets: [
+            {
+              label: 'Without Strategy',
+              data: [400000, 1400000, 240],
+              backgroundColor: 'rgba(255, 99, 132, 0.7)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 2,
+              borderRadius: 8
+            },
+            {
+              label: 'With Strategy',
+              data: [280000, 1280000, 200],
+              backgroundColor: 'rgba(0, 255, 255, 0.6)',
+              borderColor: 'rgba(0, 255, 255, 1)',
+              borderWidth: 2,
+              borderRadius: 8
+            }
+          ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+          animation: {
+            duration: 1000, // still smooth, but starts with correct values
+            easing: 'easeOutCubic'
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#00f5ff',
+                font: { size: 14 }
+              }
+            }
+          },
+          options: {
+            responsive: true,
+            animation: false, // 👈 disables shrinking animation
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#00f5ff',
+                  font: { size: 14 }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#ffffff' },
+                grid: { color: 'rgba(0,255,255,0.2)' }
+              },
+              y: {
+                ticks: { color: '#ffffff' },
+                grid: { color: 'rgba(0,255,255,0.1)' }
+              }
+            }
+          }
+        }
+          
+      });
+      
+
+    // Simulate "animated" loading after delay
+    
+  </script>
+</body>
+</html>

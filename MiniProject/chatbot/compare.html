@@ -1,0 +1,63 @@
+function calculateSavings() {
+    const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+    const outstandingInput = document.getElementById('outstandingBalance').value;
+    const outstandingBalanceInput = outstandingInput ? parseFloat(outstandingInput) : loanAmount;
+    const interestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+    const loanTenure = parseInt(document.getElementById('loanTenure').value);
+    const stepUpRate = parseFloat(document.getElementById('stepUpRate').value) / 100;
+    const prepaymentAmount = parseFloat(document.getElementById('monthlyPrepayment').value) || 0;
+    const prepaymentFrequency = document.getElementById('prepaymentFrequency').value;
+    const lumpSumPrepayment = parseFloat(document.getElementById('lumpSumPrepayment').value) || 0;
+    const lumpSumMonth = parseInt(document.getElementById('lumpSumMonth').value) || null;
+  
+    const monthlyInterestRate = interestRate / 12;
+    let outstandingBalance = outstandingBalanceInput;
+    let emi = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -(loanTenure * 12)));
+    let totalPaid = 0;
+    const originalTotalPayment = emi * 12 * loanTenure;
+  
+    while (outstandingBalance > 0) {
+      const monthlyInterest = outstandingBalance * monthlyInterestRate;
+      const principalComponent = emi - monthlyInterest;
+  
+      let extraPrepayment = 0;
+      if (prepaymentAmount > 0) {
+        if (prepaymentFrequency === "monthly") {
+          extraPrepayment = prepaymentAmount;
+        } else if (prepaymentFrequency === "quarterly" && month % 3 === 0) {
+          extraPrepayment = prepaymentAmount;
+        } else if (prepaymentFrequency === "yearly" && month % 12 === 0) {
+          extraPrepayment = prepaymentAmount;
+        }
+      }
+  
+      outstandingBalance -= (principalComponent + extraPrepayment);
+  
+      if (lumpSumMonth && month === lumpSumMonth && lumpSumPrepayment > 0) {
+        outstandingBalance -= lumpSumPrepayment;
+        totalPaid += lumpSumPrepayment;
+      }
+  
+      totalPaid += emi + extraPrepayment;
+  
+      if (outstandingBalance <= 0) break;
+  
+      if (month % 12 === 0) {
+        emi += emi * stepUpRate;
+      }
+  
+      month++;
+    }
+  
+    const totalSavings = originalTotalPayment - totalPaid;
+    const savingsPercentage = (totalSavings / originalTotalPayment) * 100;
+  
+    const savingsDetails = document.getElementById('savingsDetails');
+    savingsDetails.innerHTML = `
+      <strong>Original Total Payment (without reducing tenure):</strong> <b>₹${originalTotalPayment.toLocaleString()}</b><br>
+      <strong>Actual Total Payment (with faster closure):</strong> <b>₹${totalPaid.toLocaleString()}</b><br>
+      <strong>You Saved:</strong> <b>₹${totalSavings.toLocaleString()}</b>
+      (<b>${savingsPercentage.toFixed(2)}%</b> savings)
+    `;
+  }
+  

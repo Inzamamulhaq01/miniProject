@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credit Report Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="style.css">
+  <!-- You can use Font Awesome or similar for icons -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+  <div class="main">
+    <div class="left-panel">
+      <div class="credit-score">
+
+        <h1>loan Health Score</h1>
+        <span>
+          <h6>May 04,2025</h6>
+          <i class="fa fa-download"></i>
+        </span>
+      </div>
+      <div class="wrapper">
+        <!-- <div class="donut-chart"></div>
+                  -->
+        <div id="chart-wrapper">
+          <canvas id="gauge" width="450" height="400"></canvas>
+          <div class="circle-overlay">
+            <h2 id="score">0</h2>
+            <h4 id="score-desc">Low</h4>
+          </div>
+        </div>
+        <div class="tips">
+
+
+
+          <h3> <i class="fa fa-lightbulb-o "></i> Tips</h3>
+          <br>
+          <hr>
+          <br>
+          <img src="images/tips.avif" alt="">
+          <div>
+            <p> Check your loan Health score at least a month <br> to aware about <br> your loan <br> optimization.</p>
+
+            <br><br>
+            <h5>See How?</h5>
+
+          </div>
+        </div>
+      </div>
+   
+
+      <h4>Score Factors <i class="fa fa-info-circle" style="color: grey;"></i></h4>
+  
+      <div class="credit-factors">
+        <div class="factor">
+          <strong id="eti-text">24%</strong><br>
+          <p> Income to EMI ratio</p>
+        </div>
+        <div class="factor">
+          <strong id="creditscore-text">800</strong><br>
+          <p>your Credit Score</p>
+        </div>
+        <div class="factor">
+          <strong id="prepayment-text">6Y 7M</strong><br>
+          <p>No of late emis</p>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <h3>Detailed summary</h3>
+      <br>
+      <div id="insight-wrapper">
+        <h4 class="shimmer-text">Generating</h4>
+        <small id="insight-logger">analyzing credit score</small>
+      </div>
+      <div id="insightList">
+      </div>
+      <div id="goto">
+        <p><i class="fa fa-info-circle" style="color: grey;"></i> To get more insight and  optimization techiniques  </p>
+        <button ><a style="text-decoration: none;color:white" href="../../chatbot/"">Get Started </a></button>
+      </div>
+    </div>
+  </div>
+  <script src="index.js"></script>
+</body>
+
+</html>

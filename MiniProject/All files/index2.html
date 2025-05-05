@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Loan Strategy Advisor</title>
+</head>
+<body>
+  <h2>Open Console (F12) to Begin Strategy Advisor</h2>
+
+  <script>
+    // EMI and Interest functions
+    function calculateEMI(P, R, N) {
+      const r = R / (12 * 100);
+      return P * r * Math.pow(1 + r, N) / (Math.pow(1 + r, N) - 1);
+    }
+
+    function ask(promptText, options) {
+      const input = prompt(`${promptText}\n${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}`);
+      const idx = parseInt(input);
+      return options[idx - 1];
+    }
+
+    function askInput(message) {
+      return parseFloat(prompt(message));
+    }
+
+    function strategyAdvisor() {
+      console.clear();
+      console.log("🏠 Smart Loan Strategy Advisor – Decision Flow & Savings Estimator");
+
+      const pnr = 1;
+      const principal = askInput("Enter loan amount (₹):");
+      const rate = askInput("Enter annual interest rate (%):");
+      const years = askInput("Loan tenure (years):");
+      const months = years * 12;
+      const baseEMI = calculateEMI(principal, rate, months);
+      const baseInterest = baseEMI * months - principal;
+
+      console.log(`📌 EMI: ₹${baseEMI.toFixed(2)} | Total Interest: ₹${baseInterest.toFixed(2)}`);
+
+      // Step 1 – User goal
+      const goal = ask("What is your primary loan goal?", [
+        "Close loan early",
+        "Reduce total interest",
+        "Lower EMI now, pay better later",
+        "I'm unsure"
+      ]);
+
+      let strategy = "";
+      let newInterest = baseInterest;
+
+      // Step 2 – Follow-up Questions & Strategy Prediction
+      if (goal === "Close loan early" || goal === "Reduce total interest") {
+        const hasMonthlyExtra = ask("Can you pay extra every month?", ["Yes", "No"]);
+        if (hasMonthlyExtra === "Yes") {
+          const flexible = ask("Can this extra EMI increase over years?", ["Yes", "No"]);
+          if (flexible === "Yes") {
+            strategy = "Flexible Monthly Extra EMI";
+            const extra = askInput("How much extra EMI monthly (₹)?");
+            newInterest = simulateExtraEMI(principal, rate, months, baseEMI + extra);
+          } else {
+            const bonus = ask("Do you expect bulk income (bonus/savings)?", ["Yes", "No"]);
+            if (bonus === "Yes") {
+              strategy = "EMI Boost + Lumpsum + Tenure Cut";
+              const extra = askInput("Extra EMI (₹)?");
+              const lump = askInput("Lump sum (₹)?");
+              newInterest = simulateBoostAndLump(principal, rate, months, baseEMI + extra, lump, 24);
+            } else {
+              strategy = "EMI Boost + Tenure Cut";
+              const boost = askInput("Extra EMI (₹)?");
+              newInterest = simulateExtraEMI(principal, rate, months, baseEMI + boost);
+            }
+          }
+        } else {
+          const getBonus = ask("Do you receive bonuses or gifts occasionally?", ["Yes", "No"]);
+          if (getBonus === "Yes") {
+            strategy = "Lump Sum at Flexible Intervals";
+            const lump = askInput("Enter expected lump sum (₹):");
+            const when = askInput("After how many months will you pay it?");
+            newInterest = simulateLumpSum(principal, rate, months, baseEMI, lump, when);
+          } else {
+            strategy = "Refinance + Tenure Cut";
+            const newRate = askInput("New refinance rate (%)?");
+            const after = askInput("Refinance after how many months?");
+            newInterest = simulateRefinance(principal, rate, newRate, months, after);
+          }
+        }
+      }
+
+      else if (goal === "Lower EMI now, pay better later") {
+        const extend = ask("Is it okay to extend tenure now?", ["Yes", "No"]);
+        if (extend === "Yes") {
+          const bulkLater = ask("Can you do a large prepayment after 3–5 years?", ["Yes", "No"]);
+          if (bulkLater === "Yes") {
+            strategy = "Increase Tenure + Save + Bulk Prepay";
+            const lump = askInput("Bulk amount after 5 years (₹)?");
+            newInterest = simulateLumpSum(principal, rate, months, baseEMI, lump, 60);
+          } else {
+            strategy = "Increase Tenure for Now, Optimize Later";
+            newInterest = baseInterest - 0; // no change yet
+          }
+        } else {
+          strategy = "Tenure Extend + Prepay Later";
+          const lump = askInput("Expected one-time prepayment later (₹)?");
+          const when = askInput("After how many months?");
+          newInterest = simulateLumpSum(principal, rate, months, baseEMI, lump, when);
+        }
+      }
+
+      else {
+        strategy = "Save Separately + Bulk Prepay";
+        const lump = askInput("How much can you save for bulk prepay? (₹)");
+        const when = askInput("After how many months?");
+        newInterest = simulateLumpSum(principal, rate, months, baseEMI, lump, when);
+      }
+
+      const saved = baseInterest - newInterest;
+      console.log(`\n🎯 Recommended Strategy: ${strategy}`);
+      console.log(`💰 Estimated New Interest: ₹${newInterest.toFixed(2)}`);
+      console.log(`🎉 Savings from Strategy: ₹${saved.toFixed(2)}`);
+      alert(`Strategy: ${strategy}\nSaved: ₹${saved.toFixed(2)}\nCheck console for full breakdown.`);
+    }
+
+    // Strategy Simulations
+    function simulateExtraEMI(P, R, N, newEMI) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0, count = 0;
+      while (balance > 0 && count < N) {
+        const interest = balance * r;
+        const principal = newEMI - interest;
+        balance -= principal;
+        total += newEMI;
+        count++;
+      }
+      return total - P;
+    }
+
+    function simulateLumpSum(P, R, N, emi, lump, monthLump) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0;
+      for (let i = 1; i <= N; i++) {
+        const interest = balance * r;
+        const principal = emi - interest;
+        balance -= principal;
+        total += emi;
+        if (i === monthLump) {
+          balance -= lump;
+          total += lump;
+        }
+        if (balance <= 0) break;
+      }
+      return total - P;
+    }
+
+    function simulateRefinance(P, oldRate, newRate, N, afterMonths) {
+      const r1 = oldRate / (12 * 100), r2 = newRate / (12 * 100);
+      const emiOld = calculateEMI(P, oldRate, N);
+      let balance = P, total = 0;
+
+      for (let i = 1; i <= afterMonths; i++) {
+        const interest = balance * r1;
+        const principal = emiOld - interest;
+        balance -= principal;
+        total += emiOld;
+      }
+
+      const emiNew = calculateEMI(balance, newRate, N - afterMonths);
+      for (let i = 1; i <= N - afterMonths; i++) {
+        const interest = balance * r2;
+        const principal = emiNew - interest;
+        balance -= principal;
+        total += emiNew;
+        if (balance <= 0) break;
+      }
+
+      return total - P;
+    }
+
+    function simulateBoostAndLump(P, R, N, newEMI, lump, lumpMonth) {
+      const r = R / (12 * 100);
+      let balance = P, total = 0;
+      for (let i = 1; i <= N; i++) {
+        const interest = balance * r;
+        const principal = newEMI - interest;
+        balance -= principal;
+        total += newEMI;
+        if (i === lumpMonth) {
+          balance -= lump;
+          total += lump;
+        }
+        if (balance <= 0) break;
+      }
+      return total - P;
+    }
+
+    strategyAdvisor();
+  </script>
+</body>
+</html>
