@@ -62,7 +62,7 @@ if (isset($_SESSION['user_id'])) {
         "In which year and which month did you pay lump sum amount?" // new question (index 7)
       ];
       const userName = <?php echo json_encode($_SESSION['user_name']); ?>;
-      console.log(userName);
+      //console.log(userName);
     window.onload = () => {
       appendMessage("bot", `Hi ${userName}! Let's plan your loan prepayment strategy.`, () => {
         askNext();
@@ -114,7 +114,7 @@ if (isset($_SESSION['user_id'])) {
 
             if (callback) callback();
           }
-        }, 40);
+        }, 30);
       } else {
         msg.textContent = text;
         chatlog.scrollTop = chatlog.scrollHeight;

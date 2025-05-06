@@ -546,16 +546,22 @@ if (!isset($_SESSION['user_id'])) {
   <script>
     async function fetchData() {
       try {
-        const userResponse = await fetch('https://mocki.io/v1/1dbe8b9d-6775-43de-9ccd-777c4125750a');
+        const userId = <?php echo json_encode($_SESSION['user_id']); ?>;
+
+        const userResponse = await fetch(`../apis/users.php?user_id=${userId}`);
         const userData = (await userResponse.json()).data;
 
-        const loanResponse = await fetch('https://mocki.io/v1/1a4a79f6-e9b1-4e6c-b23e-1db04c88e5dd');
+        const loanResponse = await fetch(`../apis/loans.php?user_id=${userId}`);
         const loanData = (await loanResponse.json()).data;
-
+       console.log(loanData);
         const monthlyIncome = parseFloat(userData.salary);
         const monthlyExpenditure = monthlyIncome - parseFloat(userData.savings);
         const emi = parseFloat(loanData.emi);
         const loanAgeMonths = parseInt(loanData.months_elapsed);
+        const total_paid = parseInt(loanData.total_paid);
+        const outstanding_balance = parseInt(loanData.outstanding_balance);
+        const interest_paid = parseInt(loanData.interest_paid);
+  
         const totalRepayment = parseFloat(loanData.total_paid);
         const principalPaid = parseFloat(loanData.principal_paid);
         const expectedTotalRepayment = emi * loanAgeMonths;
@@ -564,7 +570,7 @@ if (!isset($_SESSION['user_id'])) {
         const missedEmiCount = parseInt(loanData.missed_emi);
         const emergencyFund = parseFloat(userData.extra_fund);
         const emergencyRatio = emergencyFund / monthlyExpenditure;
-        console.log(totalRepayment)
+        //console.log(totalRepayment)
         let score = 0;
         if (eti <= 0.4) score += 2;
         else if (eti <= 0.5) score += 1;
@@ -578,9 +584,58 @@ if (!isset($_SESSION['user_id'])) {
         document.getElementById('username').textContent = userData.name;
         document.getElementById('startdate').textContent = formatDate(loanData.start_date);
         document.getElementById('enddate').textContent = formatDate(loanData.end_date);
-        animateLinearProgressMultiple([100 - eti * 10, 100 - missedEmiCount * 100, (900 - creditScore) / 900 * 100], 2000);
+        animateLinearProgressMultiple([100 - eti * 10, 100 - missedEmiCount * 100, ( creditScore) / 900 * 100], 2000);
         animateDonut(score * 10, 2000);
+        document.getElementById('insights').innerHTML=`
+        <div>
+              <span>
+                <h6>Total paid</h6>
+                <h5>${total_paid}</h5>
+              </span>
+              <span>
+                <h6>Outstanding</h6>
+                <h5>${outstanding_balance}</h5>
+              </span>
+              <span>
+                <h6>Total Interest</h6>
+                <h5>${interest_paid}</h5>
+              </span>
 
+            </div>
+            <div>
+              <span>
+                <h6>No of months</h6>
+                <h5>$12</h5>
+              </span>
+              <span>
+                <h6>prepayment</h6>
+                <h5>$0</h5>
+              </span>
+              <span>
+                <h6>Principal paid</h6>
+                <h5>${principalPaid}</h5>
+              </span>
+
+            </div>
+             <canvas id="myChart" width="250px"></canvas>
+        `;
+        document.getElementById('add-details').innerHTML= `
+            <div class="row">
+              <h5>Amount sanctioned</h5>
+              <h3>${loanData.principal}</h3>
+            </div>
+            <div class="row">
+              <h5>Rate of Interest</h5>
+              <h3>${loanData.rate}%</h3>
+            </div>
+            <div class="row">
+              <h5>tenure</h5>
+              <h3>${loanData.tenure} yrs</h3>
+            </div>
+            <div class="row">
+              <h5>startdate</h5>
+              <h3>${formatDate(loanData.start_date)}</h3>
+            </div>`;
         // document.getElementById('loan-details').innerHTML = `
         //         <strong>Principal Paid:</strong> ₹${loanData.principal_paid}<br>
         //         <strong>Tenure:</strong> ${loanData.tenure} years<br>
