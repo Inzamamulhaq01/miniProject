@@ -234,8 +234,7 @@ if (isset($_SESSION['user_id'])) {
     }
     
     // Function to show the summary without including the data in the final summary
-    async function showSummary()
-    {
+    async function showSummary() {
         let strategy = "Unable to determine strategy. Please review inputs.";
 
         // Determine strategy
@@ -280,22 +279,22 @@ if (isset($_SESSION['user_id'])) {
         // console.log("Year:", year);
         // console.log("Month:", month);
 
-        localStorage.setItem('loanAmount', parseFloat(data.principal));
-        localStorage.setItem('outstandingBalance', parseFloat(data.outstanding_balance));
-        localStorage.setItem('interestRate', parseFloat(data.rate));
-        localStorage.setItem('loanTenure', parseInt(data.tenure));
-        localStorage.setItem('startDate', data.start_date);
-        localStorage.setItem('startMonth', month);
-        localStorage.setItem('startYear', year);
-        localStorage.setItem('stepUpRate', stepUpPercent);
-        localStorage.setItem('monthlyPrepayment', prepaymentAmount);
-        localStorage.setItem('prepaymentFrequency', prepaymentFrequency);
-        localStorage.setItem('lumpSumPrepayment', lumpSumAmount);
-        localStorage.setItem('lumpSumMonth', lumpSumMonth);
+        // Build URL
+        const params = new URLSearchParams();
+        params.set('loanAmount', parseFloat(data.principal));
+        params.set('outstandingBalance', parseFloat(data.outstanding_balance));
+        params.set('interestRate', parseFloat(data.rate));
+        params.set('loanTenure', parseInt(data.tenure));
+        params.set('startDate', data.start_date);
+        params.set('startMonth', month);
+        params.set('startYear', year);
+        params.set('stepUpRate', stepUpPercent);
+        params.set('monthlyPrepayment', prepaymentAmount);
+        params.set('prepaymentFrequency', prepaymentFrequency);
+        params.set('lumpSumPrepayment', lumpSumAmount);
+        params.set('lumpSumMonth', lumpSumMonth);
 
-
-
-        const chartUrl = `graph/`;
+        const chartUrl = `graph/index.html?${params.toString()}`;
 
         // Append summary message and link
         appendMessage("bot", `✅ Summary of your responses:\n💡 Recommended Strategy:\n${strategy}`, () => {
@@ -304,13 +303,10 @@ if (isset($_SESSION['user_id'])) {
           chatlog.appendChild(detailsLink);
           chatlog.scrollTop = chatlog.scrollHeight;
         });
-    }
+      }
 
     
-   
-   
-   
-      // Function to access the stored user responses globally
+    // Function to access the stored user responses globally
     function getUserResponses() {
       return userResponses; // You can access this object anywhere in your app
     }

@@ -2,10 +2,14 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-$localhost="localhost";
-$username = "root";
-$dbpassword = "";
-$database = "loan_optimizer";
+// $localhost="localhost";
+// $username = "root";
+// $dbpassword = "";
+// $database = "loan_optimizer";
+$localhost="sql205.infinityfree.com";
+$username = "if0_38925237";
+$dbpassword = "MiniProject123";
+$database = "if0_38925237_loan_optimizer";
 
 if (!isset($conn)) {
     try {

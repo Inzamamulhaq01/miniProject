@@ -12,23 +12,22 @@ include '../conn.php';
 
 // Handle login
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
-  $email = $_POST['loginEmail'];
+  // Escape input
+  $email = mysqli_real_escape_string($conn, $_POST['loginEmail']);
   $password = $_POST['loginPassword'];
 
-  $stmt = $conn->prepare("SELECT id, name, password, newuser FROM users WHERE email = ?");
-  $stmt->bind_param("s", $email);
-  $stmt->execute();
-  $stmt->store_result();
+  // Query to get user by email
+  $sql = "SELECT id, name, password, newuser FROM users WHERE email = '$email'";
+  $result = $conn->query($sql);
 
-  if ($stmt->num_rows > 0) {
-      $stmt->bind_result($id, $name, $hashedPassword, $newuser);
-      $stmt->fetch();
+  if ($result && $result->num_rows > 0) {
+      $row = $result->fetch_assoc();
 
-      if (password_verify($password, $hashedPassword)) {
-          $_SESSION['user_id'] = $id;
-          $_SESSION['user_name'] = $name;
+      if (password_verify($password, $row['password'])) {
+          $_SESSION['user_id'] = $row['id'];
+          $_SESSION['user_name'] = $row['name'];
 
-          if ($newuser) {
+          if ($row['newuser'] == 1) {
               header("Location: ../forms/"); // New user
           } else {
               header("Location: ../dashboard"); // Returning user
@@ -41,6 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
       $message = "No user found with that email.";
   }
 }
+
 
 ?>
 <!DOCTYPE html>

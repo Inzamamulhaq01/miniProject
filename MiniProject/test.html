@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encrypted URL Example</title>
+  
+  <!-- Corrected CDN link for CryptoJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1-crypto-js.min.js"></script>
+</head>
+<body>
+  <h1>Encrypt Data and Append to URL</h1>
+  
+  <script>
+    // Example loan data
+    const loanData = {
+      loanAmount: 100000,
+      interestRate: 8,
+      loanTenure: 20,
+      startYear: 2025
+    };
+    
+    // Encrypt the data using AES
+    const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(loanData), 'your-secret-key').toString();
+
+    // Construct the URL with the encrypted data as a query parameter
+    const encryptedUrl = `charts.html?data=${encodeURIComponent(encryptedData)}`;
+
+    // Example: Redirect to the new page with the encrypted query parameter
+    console.log('Redirecting to:', encryptedUrl);
+    window.location.href = encryptedUrl;  // Uncomment this line to automatically redirect
+  </script>
+</body>
+</html>
